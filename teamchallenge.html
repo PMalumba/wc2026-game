@@ -1,0 +1,1653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FIFA World Cup 2026 - Prediction Game</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+            color: #fff;
+            background:
+                /* Gold diagonal sash */
+                linear-gradient(135deg,
+                    transparent 30%,
+                    #FFB81C 30%, #FFB81C 38%,
+                    transparent 38%,
+                    transparent 42%,
+                    #FFB81C 42%, #FFB81C 50%,
+                    transparent 50%
+                ),
+                /* Black shoulder panel */
+                linear-gradient(180deg,
+                    #000000 0%, #000000 8%,
+                    transparent 8%
+                ),
+                /* Green base */
+                #006341;
+            background-attachment: fixed;
+        }
+        .container { max-width: 900px; margin: 0 auto; padding: 20px; }
+        header { text-align: center; padding: 30px 0; }
+        header h1 {
+            font-size: 2.5rem;
+            font-weight: 900;
+            background: linear-gradient(90deg, #FFB81C, #fff, #FFB81C);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 8px;
+            letter-spacing: 1px;
+        }
+        header p { color: #fff; font-size: 1rem; }
+        header .host-flags { font-size: 2rem; margin-bottom: 10px; letter-spacing: 8px; }
+        header .tournament-badge {
+            display: inline-block; margin-top: 12px; padding: 6px 16px;
+            background: rgba(0,0,0,0.5); border: 1px solid rgba(255,184,28,0.4);
+            border-radius: 20px; font-size: 0.8rem; color: #FFB81C;
+        }
+        .tabs { display: flex; gap: 5px; margin-bottom: 25px; flex-wrap: wrap; justify-content: center; }
+        .tab-btn {
+            padding: 10px 20px; border: none; border-radius: 8px;
+            background: rgba(0,0,0,0.6); color: #FFB81C;
+            cursor: pointer; font-size: 0.9rem; font-weight: 600; transition: all 0.3s;
+            border: 1px solid rgba(255,184,28,0.3);
+        }
+        .tab-btn:hover { background: rgba(0,0,0,0.8); color: #fff; }
+        .tab-btn.active { background: #FFB81C; color: #000; border-color: #FFB81C; }
+        .panel { display: none; animation: fadeIn 0.3s ease; }
+        .panel.active { display: block; }
+        @keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+        .card {
+            background: rgba(0,0,0,0.7); border: 1px solid rgba(255,184,28,0.2);
+            border-radius: 12px; padding: 25px; margin-bottom: 20px; backdrop-filter: blur(10px);
+        }
+        .card h2 { font-size: 1.3rem; margin-bottom: 15px; color: #FFB81C; }
+        label { display: block; margin-bottom: 6px; color: #fff; font-size: 0.9rem; }
+        input, select {
+            width: 100%; padding: 10px 14px;
+            border: 1px solid rgba(255,184,28,0.3); border-radius: 8px;
+            background: rgba(0,0,0,0.5); color: #fff;
+            font-size: 0.95rem; margin-bottom: 15px; transition: border-color 0.3s;
+        }
+        input:focus, select:focus { outline: none; border-color: #FFB81C; }
+        select option { background: #003322; color: #fff; }
+        button {
+            padding: 12px 24px; border: none; border-radius: 8px;
+            font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: all 0.3s;
+        }
+        .btn-primary { background: #FFB81C; color: #000; }
+        .btn-primary:hover { background: #e6a619; transform: translateY(-1px); }
+        .btn-secondary { background: rgba(0,0,0,0.5); color: #FFB81C; border: 1px solid rgba(255,184,28,0.3); }
+        .btn-secondary:hover { background: rgba(0,0,0,0.7); }
+        .btn-success { background: #38a169; color: #fff; }
+        .btn-success:hover { background: #2f855a; }
+        .btn-danger { background: #e53e3e; color: #fff; font-size: 0.8rem; padding: 6px 12px; }
+        .btn-danger:hover { background: #c53030; }
+        .leaderboard-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        .leaderboard-table th, .leaderboard-table td {
+            padding: 12px 15px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+        .leaderboard-table th { color: #FFB81C; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; }
+        .leaderboard-table tr:hover td { background: rgba(255,255,255,0.03); }
+        .rank-1 { color: #ffd700; font-weight: bold; }
+        .rank-2 { color: #c0c0c0; font-weight: bold; }
+        .rank-3 { color: #cd7f32; font-weight: bold; }
+        .prediction-item {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 12px 15px; border-bottom: 1px solid rgba(255,255,255,0.06);
+            flex-wrap: wrap; gap: 8px;
+        }
+        .prediction-item:last-child { border-bottom: none; }
+        .prediction-info { flex: 1; }
+        .prediction-info .player-name { font-weight: 600; color: #fff; }
+        .prediction-info .prediction-detail { font-size: 0.85rem; color: #ccc; margin-top: 3px; }
+        .badge { padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; }
+        .badge-correct { background: rgba(56,161,105,0.2); color: #68d391; }
+        .badge-wrong { background: rgba(229,62,62,0.2); color: #fc8181; }
+        .badge-pending { background: rgba(245,166,35,0.2); color: #f5a623; }
+        .player-chip {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 6px 14px; background: rgba(0,0,0,0.5);
+            border-radius: 20px; margin: 4px; font-size: 0.85rem; color: #fff;
+            border: 1px solid rgba(255,184,28,0.2);
+        }
+        .player-chip .remove-player { cursor: pointer; color: #e53e3e; font-weight: bold; }
+        .info-box {
+            background: rgba(255,184,28,0.15); border: 1px solid rgba(255,184,28,0.4);
+            border-radius: 8px; padding: 15px; margin-bottom: 20px; font-size: 0.9rem; color: #FFB81C;
+        }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .stat-card {
+            background: rgba(0,0,0,0.6); border: 1px solid rgba(255,184,28,0.2);
+            border-radius: 10px; padding: 15px; text-align: center;
+        }
+        .stat-card .stat-value { font-size: 1.8rem; font-weight: 700; color: #FFB81C; }
+        .stat-card .stat-label { font-size: 0.8rem; color: #ccc; margin-top: 4px; }
+        .empty-state { text-align: center; padding: 40px; color: #ccc; }
+        .empty-state .emoji { font-size: 3rem; margin-bottom: 10px; }
+        .winner-banner {
+            text-align: center; padding: 30px;
+            background: linear-gradient(135deg, rgba(255,184,28,0.2), rgba(0,99,65,0.3));
+            border: 2px solid rgba(255,184,28,0.5); border-radius: 12px; margin-bottom: 20px;
+        }
+        .winner-banner h2 { color: #FFB81C; font-size: 1.8rem; }
+        .winner-banner p { color: #fff; margin-top: 8px; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        @media (max-width: 600px) {
+            .form-row { grid-template-columns: 1fr; }
+            header h1 { font-size: 1.6rem; }
+            .tabs { gap: 3px; }
+            .tab-btn { padding: 8px 12px; font-size: 0.8rem; }
+        }
+        .toast {
+            position: fixed; bottom: 20px; right: 20px; padding: 12px 20px;
+            background: #38a169; color: #fff; border-radius: 8px; font-size: 0.9rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3); transform: translateY(100px);
+            opacity: 0; transition: all 0.3s; z-index: 1000;
+        }
+        .toast.show { transform: translateY(0); opacity: 1; }
+        .sync-status {
+            text-align: center; padding: 5px; font-size: 0.75rem; color: #68d391;
+            margin-bottom: 10px; background: rgba(0,0,0,0.4); border-radius: 6px;
+        }
+        .sync-status.offline { color: #fc8181; }
+        .loading { text-align: center; padding: 20px; color: #a0aec0; }
+        .pct-match { margin-bottom: 15px; padding: 12px; background: rgba(0,0,0,0.3); border-radius: 8px; }
+        .pct-match-title { font-size: 0.85rem; color: #FFB81C; margin-bottom: 8px; font-weight: 600; }
+        .pct-bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+        .pct-label { font-size: 0.8rem; color: #fff; min-width: 100px; }
+        .pct-bar { flex: 1; height: 18px; background: rgba(255,255,255,0.1); border-radius: 9px; overflow: hidden; }
+        .pct-fill { height: 100%; border-radius: 9px; display: flex; align-items: center; justify-content: flex-end; padding-right: 6px; font-size: 0.7rem; font-weight: 600; color: #000; min-width: fit-content; }
+        .pct-fill-a { background: #FFB81C; }
+        .pct-fill-b { background: #68d391; }
+        .pct-fill-draw { background: #a0aec0; }
+        .hero-banner {
+            position: relative; border-radius: 16px; overflow: hidden;
+            margin-bottom: 25px; height: 180px;
+            background: linear-gradient(135deg, rgba(0,0,0,0.8), rgba(0,99,65,0.7)),
+                        url('https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=900&q=80') center/cover no-repeat;
+            border: 2px solid rgba(255,184,28,0.3);
+        }
+        .hero-banner .hero-content {
+            position: absolute; inset: 0; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; text-align: center; padding: 20px;
+        }
+        .hero-banner h2 { font-size: 1.4rem; color: #fff; text-shadow: 0 2px 8px rgba(0,0,0,0.5); }
+        .hero-banner p { color: rgba(255,255,255,0.85); font-size: 0.9rem; margin-top: 6px; }
+        .host-cities {
+            display: flex; justify-content: center; gap: 12px; flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        .host-city {
+            display: flex; align-items: center; gap: 6px; padding: 6px 12px;
+            background: rgba(0,0,0,0.5); border: 1px solid rgba(255,184,28,0.2);
+            border-radius: 20px; font-size: 0.75rem; color: #fff;
+        }
+        .stage-icon { font-size: 1.2rem; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="host-flags">🇺🇸 🇨🇦 🇲🇽</div>
+            <h1>⚽ FIFA World Cup 2026</h1>
+            <p>Team Prediction Challenge</p>
+            <div class="tournament-badge">🏟️ 48 Teams · 104 Matches · 16 Cities · Jun 11 – Jul 19</div>
+        </header>
+        <div class="sync-status" id="sync-status">🟢 Connected — syncing live</div>
+
+        <div class="tabs" role="tablist">
+            <button class="tab-btn active" data-panel="dashboard" role="tab" aria-selected="true">Dashboard</button>
+            <button class="tab-btn" data-panel="predict" role="tab">Make Prediction</button>
+            <button class="tab-btn" data-panel="results" role="tab">Results</button>
+            <button class="tab-btn" data-panel="leaderboard" role="tab">Leaderboard</button>
+            <button class="tab-btn" data-panel="manage" role="tab" id="manage-tab-btn" style="display:none;">Manage</button>
+        </div>
+
+        <!-- Dashboard -->
+        <div id="dashboard" class="panel active">
+            <div class="hero-banner">
+                <div class="hero-content">
+                    <h2>🏆 FIFA World Cup 2026™</h2>
+                    <p>United States · Canada · Mexico</p>
+                </div>
+            </div>
+            <div class="host-cities">
+                <span class="host-city">🇺🇸 New York</span>
+                <span class="host-city">🇺🇸 Los Angeles</span>
+                <span class="host-city">🇺🇸 Dallas</span>
+                <span class="host-city">🇺🇸 Miami</span>
+                <span class="host-city">🇨🇦 Toronto</span>
+                <span class="host-city">🇨🇦 Vancouver</span>
+                <span class="host-city">🇲🇽 Mexico City</span>
+                <span class="host-city">🇲🇽 Guadalajara</span>
+            </div>
+            <div id="winner-section"></div>
+            <div class="stats-grid" id="stats-grid"></div>
+            <div class="card">
+                <h2>🏆 Top 5 Leaderboard</h2>
+                <div id="dashboard-leaderboard"></div>
+            </div>
+            <div class="card">
+                <h2>� Prediction Stats</h2>
+                <p style="color: #ccc; margin-bottom: 10px; font-size: 0.85rem;">How the group is predicting each match</p>
+                <div id="prediction-percentages"></div>
+            </div>
+            <div class="card" id="admin-recent-predictions" style="display:none;">
+                <h2>�📋 Recent Predictions (Admin Only)</h2>
+                <div id="recent-predictions"></div>
+            </div>
+        </div>
+
+        <!-- Make Prediction -->
+        <div id="predict" class="panel">
+            <div class="card">
+                <h2>🎯 Submit a Prediction</h2>
+                <div class="info-box">
+                    Points increase as the tournament progresses:<br>
+                    <span class="stage-icon">⚽</span> Group Stage = 5 pts &nbsp;|&nbsp;
+                    <span class="stage-icon">🏟️</span> Round of 32 = 10 pts &nbsp;|&nbsp;
+                    <span class="stage-icon">🎯</span> Round of 16 = 15 pts<br>
+                    <span class="stage-icon">🔥</span> Quarter-Finals = 20 pts &nbsp;|&nbsp;
+                    <span class="stage-icon">⭐</span> Semi-Finals = 25 pts &nbsp;|&nbsp;
+                    <span class="stage-icon">🥉</span> Third Place = 30 pts &nbsp;|&nbsp;
+                    <span class="stage-icon">🏆</span> Final = 35 pts
+                </div>
+                <div class="form-row">
+                    <div>
+                        <label for="pred-player">Your Name</label>
+                        <select id="pred-player"><option value="">Select your name...</option></select>
+                        <div style="display:flex; gap:8px; margin-top:-10px; margin-bottom:15px;">
+                            <input type="text" id="pred-player-new" placeholder="Or type your name to join" style="margin-bottom:0; flex:1; font-size:0.85rem; padding:8px 12px;">
+                            <button class="btn-secondary" id="pred-player-join-btn" style="padding:8px 14px; font-size:0.8rem; white-space:nowrap;">Join Game</button>
+                        </div>
+                    </div>
+                    <div>
+                        <label for="pred-stage">Match Date</label>
+                        <select id="pred-stage"><option value="">Select date...</option></select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div>
+                        <label for="pred-match-select">Match</label>
+                        <select id="pred-match-select"><option value="">Select date first...</option></select>
+                    </div>
+                    <div>
+                        <label for="pred-team">Predicted Winner</label>
+                        <select id="pred-team"><option value="">Select match first...</option></select>
+                    </div>
+                </div>
+                <button class="btn-primary" id="submit-prediction-btn">Submit Prediction</button>
+            </div>
+        </div>
+
+        <!-- Results -->
+        <div id="results" class="panel">
+            <div class="card">
+                <h2>📡 Fetch Live Results</h2>
+                <p style="color: #a0aec0; margin-bottom: 15px; font-size: 0.9rem;">
+                    Pull completed match results from the live API and auto-score predictions. Also updates knockout fixture names with real teams as FIFA confirms them.
+                </p>
+                <button class="btn-success" id="fetch-results-btn">🔄 Fetch Results & Update Fixtures</button>
+                <p id="fetch-status" style="color: #a0aec0; margin-top: 10px; font-size: 0.85rem;"></p>
+            </div>
+            <div class="card">
+                <h2>✅ Manual Result Entry</h2>
+                <p style="color: #a0aec0; margin-bottom: 15px; font-size: 0.9rem;">
+                    Or manually enter a result if the API is unavailable. <strong>Admin only.</strong>
+                </p>
+                <div id="manual-result-section" style="display:none;">
+                    <div class="form-row">
+                        <div>
+                            <label for="res-stage">Match Date</label>
+                            <select id="res-stage"><option value="">Select date...</option></select>
+                        </div>
+                        <div>
+                            <label for="res-match-select">Match</label>
+                            <select id="res-match-select"><option value="">Select date first...</option></select>
+                        </div>
+                    </div>
+                    <label for="res-winner">Winning Team</label>
+                    <input type="text" id="res-winner" placeholder="e.g., Brazil">
+                    <button class="btn-success" id="record-result-btn">Record Result & Score</button>
+                </div>
+                <p id="manual-result-locked" style="color: #fc8181; font-size: 0.85rem;">🔒 Unlock admin in the Manage tab to enter results manually.</p>
+            </div>
+            <div class="card">
+                <h2>📜 Recorded Results</h2>
+                <div id="results-list"></div>
+            </div>
+            <div class="card">
+                <h2>🏆 Declare Tournament Winner</h2>
+                <p style="color: #a0aec0; margin-bottom: 15px; font-size: 0.9rem;">
+                    Once the World Cup final is over, declare the game winner. The player with the highest total points wins.
+                </p>
+                <button class="btn-primary" id="declare-winner-btn" style="display:none;">Declare Game Winner</button>
+                <p id="declare-winner-locked" style="color: #fc8181; font-size: 0.85rem;">🔒 Unlock admin in the Manage tab to declare the winner.</p>
+            </div>
+        </div>
+
+        <!-- Leaderboard -->
+        <div id="leaderboard" class="panel">
+            <div class="card">
+                <h2>🏆 Full Leaderboard</h2>
+                <div id="full-leaderboard"></div>
+            </div>
+            <div class="card">
+                <h2>📊 Player Breakdown</h2>
+                <div id="player-breakdown"></div>
+            </div>
+        </div>
+
+        <!-- Manage -->
+        <div id="manage" class="panel">
+            <div class="card">
+                <h2>👥 Players</h2>
+                <p style="color: #a0aec0; margin-bottom: 15px; font-size: 0.9rem;">
+                    Players join via the "Make Prediction" tab. Current players listed below.
+                </p>
+                <div id="players-list"></div>
+                <p style="color: #a0aec0; margin-top: 10px; font-size: 0.8rem;" id="player-count"></p>
+            </div>
+            <div class="card">
+                <h2>⚙️ Scoring</h2>
+                <div class="info-box">
+                    Points are automatically calculated based on stage:<br>
+                    Group Stage = 5 pts | Round of 32 = 10 pts | Round of 16 = 15 pts<br>
+                    Quarter-Finals = 20 pts | Semi-Finals = 25 pts | Third Place = 30 pts | Final = 35 pts
+                </div>
+            </div>
+            <div class="card">
+                <h2>🔐 Admin Access</h2>
+                <p style="color: #a0aec0; margin-bottom: 15px; font-size: 0.9rem;">
+                    Enter the admin PIN to access results management, fixture updates, and game controls.
+                </p>
+                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                    <input type="password" id="admin-pin-input" placeholder="Enter admin PIN" style="margin-bottom: 0; flex: 1;">
+                    <button class="btn-primary" id="admin-unlock-btn">Unlock</button>
+                </div>
+                <div id="admin-section" style="display:none;">
+                    <div class="card" style="background:rgba(56,161,105,0.05); border-color:rgba(56,161,105,0.2);">
+                        <h2 style="color:#68d391;">✅ Admin Unlocked</h2>
+
+                        <h3 style="color:#f5a623; margin:15px 0 10px;">Add Player Manually</h3>
+                        <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                            <input type="text" id="new-player" placeholder="Enter player name" style="margin-bottom: 0; flex: 1;">
+                            <button class="btn-primary" id="add-player-btn">Add</button>
+                        </div>
+
+                        <h3 style="color:#f5a623; margin:15px 0 10px;">Update Fixture Names</h3>
+                        <p style="color: #a0aec0; margin-bottom: 10px; font-size: 0.85rem;">
+                            Update match names as real teams are confirmed after each round.
+                        </p>
+                        <div class="form-row">
+                            <div>
+                                <label for="fix-stage">Match Date</label>
+                                <select id="fix-stage"><option value="">Select date...</option></select>
+                            </div>
+                            <div>
+                                <label for="fix-match">Current Match</label>
+                                <select id="fix-match"><option value="">Select date first...</option></select>
+                            </div>
+                        </div>
+                        <label for="fix-new-name">New Match Name</label>
+                        <input type="text" id="fix-new-name" placeholder="e.g., Brazil vs Japan">
+                        <button class="btn-secondary" id="update-fixture-btn">Update Fixture Name</button>
+
+                        <h3 style="color:#f5a623; margin:20px 0 10px;">Remove Player</h3>
+                        <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                            <select id="remove-player-select" style="margin-bottom:0; flex:1;"><option value="">Select player...</option></select>
+                            <button class="btn-danger" id="remove-player-btn">Remove</button>
+                        </div>
+
+                        <h3 style="color:#f5a623; margin:20px 0 10px;">Reset Game</h3>
+                        <button class="btn-danger" id="reset-game-btn">Reset All Data</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <!-- Firebase SDK (page works without it - falls back to localStorage) -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+
+    <script>
+    // ==========================================================
+    // *** CONFIGURATION - REPLACE THESE VALUES ***
+    // ==========================================================
+    const CONFIG = {
+        firebase: {
+            apiKey: "AIzaSyBMEbKERGKSFxgcgtNeM1GPRf4tVQ2u4JQ",
+            authDomain: "wc2026-predictions-f2b0c.firebaseapp.com",
+            databaseURL: "https://wc2026-predictions-f2b0c-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "wc2026-predictions-f2b0c"
+        },
+        // Free tier: 100 requests/day from https://www.api-football.com/
+        // World Cup 2026 league ID = 1 (FIFA World Cup), season = 2026
+        footballApi: {
+            key: "da0e18eda4eaf2f526d49409098a9406f7f1780d35b5afc3525145280f603c57",
+            baseUrl: "https://v3.football.api-sports.io",
+            leagueId: 1,
+            season: 2026
+        }
+    };
+    // ==========================================================
+
+    // ========== ADMIN PIN (change this to your own secret PIN) ==========
+    const ADMIN_PIN = '2026';
+    var isAdminUnlocked = false;
+
+    // ========== FIREBASE INIT (with fallback to localStorage if not configured) ==========
+    var firebaseReady = false;
+    var db, gameRef;
+
+    try {
+        if (typeof firebase !== 'undefined' && CONFIG.firebase.apiKey !== 'YOUR_FIREBASE_API_KEY' && CONFIG.firebase.databaseURL.indexOf('YOUR_PROJECT') === -1) {
+            firebase.initializeApp(CONFIG.firebase);
+            db = firebase.database();
+            gameRef = db.ref('wc2026game_team2');
+            firebaseReady = true;
+        }
+    } catch (e) {
+        console.warn('Firebase not available, using localStorage fallback:', e.message);
+    }
+
+    if (!firebaseReady) {
+        document.getElementById('sync-status').textContent = '📁 Offline mode — data saved locally (configure Firebase for multiplayer sync)';
+        document.getElementById('sync-status').className = 'sync-status offline';
+    }
+
+    // ========== GLOBAL STATE (synced from Firebase) ==========
+    let gameData = { players: [], predictions: {}, results: {}, winner: null };
+    let fixtureOverrides = {}; // Live fixture name updates from Firebase
+
+    // Load fixture overrides from localStorage (for offline mode)
+    try {
+        var savedFixtures = localStorage.getItem('wc2026_fixtures');
+        if (savedFixtures) fixtureOverrides = JSON.parse(savedFixtures);
+    } catch(e) {}
+
+    // ========== STAGES & FIXTURES ==========
+    const STAGES = [
+        'Group Stage - Thu Jun 11', 'Group Stage - Fri Jun 12', 'Group Stage - Sat Jun 13',
+        'Group Stage - Sun Jun 14', 'Group Stage - Mon Jun 15', 'Group Stage - Tue Jun 16',
+        'Group Stage - Wed Jun 17', 'Group Stage - Thu Jun 18', 'Group Stage - Fri Jun 19',
+        'Group Stage - Sat Jun 20', 'Group Stage - Sun Jun 21', 'Group Stage - Mon Jun 22',
+        'Group Stage - Tue Jun 23', 'Group Stage - Wed Jun 24', 'Group Stage - Thu Jun 25',
+        'Group Stage - Fri Jun 26', 'Group Stage - Sat Jun 27',
+        'Round of 32 - Sun Jun 28', 'Round of 32 - Mon Jun 29', 'Round of 32 - Tue Jun 30',
+        'Round of 32 - Wed Jul 1', 'Round of 32 - Thu Jul 2', 'Round of 32 - Fri Jul 3',
+        'Round of 16 - Sat Jul 4', 'Round of 16 - Sun Jul 5', 'Round of 16 - Mon Jul 6', 'Round of 16 - Tue Jul 7',
+        'Quarter-Finals - Thu Jul 9', 'Quarter-Finals - Fri Jul 10', 'Quarter-Finals - Sat Jul 11',
+        'Semi-Finals - Tue Jul 14', 'Semi-Finals - Wed Jul 15',
+        'Third Place - Sat Jul 18', 'Final - Sun Jul 19'
+    ];
+
+    const PRELOADED_MATCHES = {
+        'Group Stage - Thu Jun 11': [
+            { match: 'Mexico vs South Africa (Group A)', venue: 'Mexico City Stadium' },
+            { match: 'South Korea vs Czechia (Group A)', venue: 'Guadalajara Stadium' }
+        ],
+        'Group Stage - Fri Jun 12': [
+            { match: 'Canada vs Bosnia and Herzegovina (Group B)', venue: 'Toronto Stadium' },
+            { match: 'USA vs Paraguay (Group D)', venue: 'Los Angeles Stadium' }
+        ],
+        'Group Stage - Sat Jun 13': [
+            { match: 'Qatar vs Switzerland (Group B)', venue: 'San Francisco Bay Area Stadium' },
+            { match: 'Brazil vs Morocco (Group C)', venue: 'New York New Jersey Stadium' },
+            { match: 'Haiti vs Scotland (Group C)', venue: 'Boston Stadium' }
+        ],
+        'Group Stage - Sun Jun 14': [
+            { match: 'Australia vs Turkiye (Group D)', venue: 'BC Place, Vancouver' },
+            { match: 'Germany vs Curacao (Group E)', venue: 'Houston Stadium' },
+            { match: 'Netherlands vs Japan (Group F)', venue: 'Dallas Stadium' },
+            { match: 'Ivory Coast vs Ecuador (Group E)', venue: 'Philadelphia Stadium' },
+            { match: 'Sweden vs Tunisia (Group F)', venue: 'Monterrey Stadium' }
+        ],
+        'Group Stage - Mon Jun 15': [
+            { match: 'Spain vs Cabo Verde (Group H)', venue: 'Atlanta Stadium' },
+            { match: 'Belgium vs Egypt (Group G)', venue: 'Seattle Stadium' },
+            { match: 'Saudi Arabia vs Uruguay (Group H)', venue: 'Miami Stadium' },
+            { match: 'Iran vs New Zealand (Group G)', venue: 'Los Angeles Stadium' }
+        ],
+        'Group Stage - Tue Jun 16': [
+            { match: 'France vs Senegal (Group I)', venue: 'New York New Jersey Stadium' },
+            { match: 'Iraq vs Norway (Group I)', venue: 'Boston Stadium' },
+            { match: 'Argentina vs Algeria (Group J)', venue: 'Kansas City Stadium' }
+        ],
+        'Group Stage - Wed Jun 17': [
+            { match: 'Austria vs Jordan (Group J)', venue: 'San Francisco Bay Area Stadium' },
+            { match: 'Portugal vs DR Congo (Group K)', venue: 'Houston Stadium' },
+            { match: 'England vs Croatia (Group L)', venue: 'Dallas Stadium' },
+            { match: 'Ghana vs Panama (Group L)', venue: 'Toronto Stadium' },
+            { match: 'Uzbekistan vs Colombia (Group K)', venue: 'Mexico City Stadium' }
+        ],
+        'Group Stage - Thu Jun 18': [
+            { match: 'Czechia vs South Africa (Group A)', venue: 'Atlanta Stadium' },
+            { match: 'Switzerland vs Bosnia and Herzegovina (Group B)', venue: 'Los Angeles Stadium' },
+            { match: 'Canada vs Qatar (Group B)', venue: 'BC Place, Vancouver' },
+            { match: 'Mexico vs South Korea (Group A)', venue: 'Guadalajara Stadium' }
+        ],
+        'Group Stage - Fri Jun 19': [
+            { match: 'Turkiye vs Paraguay (Group D)', venue: 'San Francisco Bay Area Stadium' },
+            { match: 'USA vs Australia (Group D)', venue: 'Seattle Stadium' },
+            { match: 'Scotland vs Morocco (Group C)', venue: 'Boston Stadium' },
+            { match: 'Brazil vs Haiti (Group C)', venue: 'Philadelphia Stadium' }
+        ],
+        'Group Stage - Sat Jun 20': [
+            { match: 'Netherlands vs Sweden (Group F)', venue: 'Houston Stadium' },
+            { match: 'Germany vs Ivory Coast (Group E)', venue: 'Toronto Stadium' },
+            { match: 'Ecuador vs Curacao (Group E)', venue: 'Kansas City Stadium' }
+        ],
+        'Group Stage - Sun Jun 21': [
+            { match: 'Tunisia vs Japan (Group F)', venue: 'Monterrey Stadium' },
+            { match: 'Spain vs Saudi Arabia (Group H)', venue: 'Atlanta Stadium' },
+            { match: 'Belgium vs Iran (Group G)', venue: 'Los Angeles Stadium' },
+            { match: 'Uruguay vs Cabo Verde (Group H)', venue: 'Miami Stadium' },
+            { match: 'New Zealand vs Egypt (Group G)', venue: 'BC Place, Vancouver' }
+        ],
+        'Group Stage - Mon Jun 22': [
+            { match: 'Argentina vs Austria (Group J)', venue: 'Dallas Stadium' },
+            { match: 'France vs Iraq (Group I)', venue: 'Philadelphia Stadium' },
+            { match: 'Norway vs Senegal (Group I)', venue: 'New York New Jersey Stadium' },
+            { match: 'Jordan vs Algeria (Group J)', venue: 'San Francisco Bay Area Stadium' }
+        ],
+        'Group Stage - Tue Jun 23': [
+            { match: 'Portugal vs Uzbekistan (Group K)', venue: 'Houston Stadium' },
+            { match: 'England vs Ghana (Group L)', venue: 'Boston Stadium' },
+            { match: 'Panama vs Croatia (Group L)', venue: 'Toronto Stadium' },
+            { match: 'Colombia vs DR Congo (Group K)', venue: 'Guadalajara Stadium' }
+        ],
+        'Group Stage - Wed Jun 24': [
+            { match: 'Switzerland vs Canada (Group B)', venue: 'BC Place, Vancouver' },
+            { match: 'Bosnia and Herzegovina vs Qatar (Group B)', venue: 'Seattle Stadium' },
+            { match: 'Scotland vs Brazil (Group C)', venue: 'Miami Stadium' },
+            { match: 'Morocco vs Haiti (Group C)', venue: 'Atlanta Stadium' },
+            { match: 'Czechia vs Mexico (Group A)', venue: 'Mexico City Stadium' },
+            { match: 'South Africa vs South Korea (Group A)', venue: 'Monterrey Stadium' }
+        ],
+        'Group Stage - Thu Jun 25': [
+            { match: 'Curacao vs Ivory Coast (Group E)', venue: 'Philadelphia Stadium' },
+            { match: 'Ecuador vs Germany (Group E)', venue: 'New York New Jersey Stadium' },
+            { match: 'Japan vs Sweden (Group F)', venue: 'Dallas Stadium' },
+            { match: 'Tunisia vs Netherlands (Group F)', venue: 'Kansas City Stadium' },
+            { match: 'Turkiye vs USA (Group D)', venue: 'Los Angeles Stadium' },
+            { match: 'Paraguay vs Australia (Group D)', venue: 'San Francisco Bay Area Stadium' }
+        ],
+        'Group Stage - Fri Jun 26': [
+            { match: 'Norway vs France (Group I)', venue: 'Boston Stadium' },
+            { match: 'Senegal vs Iraq (Group I)', venue: 'Toronto Stadium' },
+            { match: 'Cabo Verde vs Saudi Arabia (Group H)', venue: 'Houston Stadium' },
+            { match: 'Uruguay vs Spain (Group H)', venue: 'Guadalajara Stadium' },
+            { match: 'Egypt vs Iran (Group G)', venue: 'Seattle Stadium' },
+            { match: 'New Zealand vs Belgium (Group G)', venue: 'BC Place, Vancouver' }
+        ],
+        'Group Stage - Sat Jun 27': [
+            { match: 'Panama vs England (Group L)', venue: 'New York New Jersey Stadium' },
+            { match: 'Croatia vs Ghana (Group L)', venue: 'Philadelphia Stadium' },
+            { match: 'Colombia vs Portugal (Group K)', venue: 'Miami Stadium' },
+            { match: 'DR Congo vs Uzbekistan (Group K)', venue: 'Atlanta Stadium' },
+            { match: 'Algeria vs Austria (Group J)', venue: 'Kansas City Stadium' },
+            { match: 'Jordan vs Argentina (Group J)', venue: 'Dallas Stadium' }
+        ],
+        'Round of 32 - Sun Jun 28': [
+            { match: 'M73: 2nd Group A vs 2nd Group B', venue: 'Los Angeles Stadium' }
+        ],
+        'Round of 32 - Mon Jun 29': [
+            { match: 'M76: 1st Group C vs 2nd Group F', venue: 'Houston Stadium' },
+            { match: 'M74: 1st Group E vs Best 3rd (A/B/C/D/F)', venue: 'Boston Stadium' },
+            { match: 'M75: 1st Group F vs 2nd Group C', venue: 'Monterrey Stadium' }
+        ],
+        'Round of 32 - Tue Jun 30': [
+            { match: 'M78: 2nd Group E vs 2nd Group I', venue: 'Dallas Stadium' },
+            { match: 'M77: 1st Group I vs Best 3rd (C/D/F/G/H)', venue: 'New York New Jersey Stadium' },
+            { match: 'M79: 1st Group A vs Best 3rd (C/E/F/H/I)', venue: 'Mexico City Stadium' }
+        ],
+        'Round of 32 - Wed Jul 1': [
+            { match: 'M80: 1st Group L vs Best 3rd (E/H/I/J/K)', venue: 'Atlanta Stadium' },
+            { match: 'M82: 1st Group G vs Best 3rd (A/E/H/I/J)', venue: 'Seattle Stadium' },
+            { match: 'M81: 1st Group D vs Best 3rd (B/E/F/I/J)', venue: 'San Francisco Bay Area Stadium' }
+        ],
+        'Round of 32 - Thu Jul 2': [
+            { match: 'M84: 1st Group H vs 2nd Group J', venue: 'Los Angeles Stadium' },
+            { match: 'M83: 2nd Group K vs 2nd Group L', venue: 'Toronto Stadium' },
+            { match: 'M85: 1st Group B vs Best 3rd (E/F/G/I/J)', venue: 'BC Place, Vancouver' }
+        ],
+        'Round of 32 - Fri Jul 3': [
+            { match: 'M88: 2nd Group D vs 2nd Group G', venue: 'Dallas Stadium' },
+            { match: 'M86: 1st Group J vs 2nd Group H', venue: 'Miami Stadium' },
+            { match: 'M87: 1st Group K vs Best 3rd (D/E/I/J/L)', venue: 'Kansas City Stadium' }
+        ],
+        'Round of 16 - Sat Jul 4': [
+            { match: 'M90: Winner M73 vs Winner M75', venue: 'Houston Stadium' },
+            { match: 'M89: Winner M74 vs Winner M77', venue: 'Philadelphia Stadium' }
+        ],
+        'Round of 16 - Sun Jul 5': [
+            { match: 'M91: Winner M76 vs Winner M78', venue: 'New York New Jersey Stadium' },
+            { match: 'M92: Winner M79 vs Winner M80', venue: 'Mexico City Stadium' }
+        ],
+        'Round of 16 - Mon Jul 6': [
+            { match: 'M93: Winner M83 vs Winner M84', venue: 'Dallas Stadium' },
+            { match: 'M94: Winner M81 vs Winner M82', venue: 'Seattle Stadium' }
+        ],
+        'Round of 16 - Tue Jul 7': [
+            { match: 'M95: Winner M86 vs Winner M88', venue: 'Atlanta Stadium' },
+            { match: 'M96: Winner M85 vs Winner M87', venue: 'BC Place, Vancouver' }
+        ],
+        'Quarter-Finals - Thu Jul 9': [
+            { match: 'QF1: Winner M89 vs Winner M90', venue: 'Boston Stadium' }
+        ],
+        'Quarter-Finals - Fri Jul 10': [
+            { match: 'QF2: Winner M93 vs Winner M94', venue: 'Los Angeles Stadium' }
+        ],
+        'Quarter-Finals - Sat Jul 11': [
+            { match: 'QF3: Winner M91 vs Winner M92', venue: 'Miami Stadium' },
+            { match: 'QF4: Winner M95 vs Winner M96', venue: 'Kansas City Stadium' }
+        ],
+        'Semi-Finals - Tue Jul 14': [
+            { match: 'SF1: Winner QF1 vs Winner QF2', venue: 'Dallas Stadium' }
+        ],
+        'Semi-Finals - Wed Jul 15': [
+            { match: 'SF2: Winner QF3 vs Winner QF4', venue: 'Atlanta Stadium' }
+        ],
+        'Third Place - Sat Jul 18': [
+            { match: 'Third Place Play-off', venue: 'Miami Stadium' }
+        ],
+        'Final - Sun Jul 19': [
+            { match: 'World Cup Final', venue: 'New York New Jersey Stadium' }
+        ]
+    };
+
+    // ========== POINTS ==========
+    function getStageMultiplier(stage) {
+        if (stage.indexOf('Group Stage') === 0) return 5;
+        if (stage.indexOf('Round of 32') === 0) return 10;
+        if (stage.indexOf('Round of 16') === 0) return 15;
+        if (stage.indexOf('Quarter-Finals') === 0) return 20;
+        if (stage.indexOf('Semi-Finals') === 0) return 25;
+        if (stage.indexOf('Third Place') === 0) return 30;
+        if (stage.indexOf('Final') === 0) return 35;
+        return 5;
+    }
+
+    // ========== TOAST ==========
+    function showToast(msg) {
+        var toast = document.getElementById('toast');
+        toast.textContent = msg;
+        toast.classList.add('show');
+        setTimeout(function() { toast.classList.remove('show'); }, 3000);
+    }
+
+    // ========== FIREBASE REAL-TIME SYNC ==========
+    var STORAGE_KEY = 'wc2026_prediction_game';
+
+    function loadLocalData() {
+        try {
+            var raw = localStorage.getItem(STORAGE_KEY);
+            if (raw) return JSON.parse(raw);
+        } catch(e) {}
+        return { players: [], predictions: {}, results: {}, winner: null };
+    }
+
+    function saveLocalData() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(gameData));
+    }
+
+    if (firebaseReady) {
+        // Set a timeout - if Firebase doesn't respond in 5 seconds, fall back to localStorage
+        var firebaseLoaded = false;
+        var firebaseTimeout = setTimeout(function() {
+            if (!firebaseLoaded) {
+                console.warn('Firebase timeout - falling back to localStorage');
+                gameData = loadLocalData();
+                renderAll();
+            }
+        }, 5000);
+
+        gameRef.on('value', function(snapshot) {
+            firebaseLoaded = true;
+            clearTimeout(firebaseTimeout);
+            var data = snapshot.val();
+            if (data) {
+                gameData.players = data.players || [];
+                gameData.predictions = data.predictions || {};
+                gameData.results = data.results || {};
+                gameData.winner = data.winner || null;
+            } else {
+                gameData = { players: [], predictions: {}, results: {}, winner: null };
+            }
+            renderAll();
+        }, function(error) {
+            // Firebase error - fall back to localStorage
+            firebaseLoaded = true;
+            clearTimeout(firebaseTimeout);
+            console.warn('Firebase error:', error.message);
+            firebaseReady = false;
+            document.getElementById('sync-status').textContent = '📁 Offline mode — Firebase unavailable, using local storage';
+            document.getElementById('sync-status').className = 'sync-status offline';
+            gameData = loadLocalData();
+            renderAll();
+        });
+
+        // Live fixture overrides - update match names in real-time
+        db.ref('fixtures').on('value', function(snapshot) {
+            fixtureOverrides = snapshot.val() || {};
+            renderAll();
+        });
+
+        // Connection status
+        db.ref('.info/connected').on('value', function(snap) {
+            var el = document.getElementById('sync-status');
+            if (snap.val() === true) {
+                el.textContent = '🟢 Connected — syncing live';
+                el.className = 'sync-status';
+            } else {
+                el.textContent = '🔴 Offline — changes will sync when reconnected';
+                el.className = 'sync-status offline';
+            }
+        });
+    } else {
+        // localStorage fallback mode
+        gameData = loadLocalData();
+        renderAll();
+    }
+
+    // Helper to save data (Firebase or localStorage)
+    function persistData(path, value) {
+        if (firebaseReady) {
+            gameRef.child(path).set(value);
+        } else {
+            // Update local gameData and save
+            var parts = path.split('/');
+            var obj = gameData;
+            for (var i = 0; i < parts.length - 1; i++) {
+                if (!obj[parts[i]]) obj[parts[i]] = {};
+                obj = obj[parts[i]];
+            }
+            obj[parts[parts.length - 1]] = value;
+            saveLocalData();
+            renderAll();
+        }
+    }
+
+    function persistUpdate(updates) {
+        if (firebaseReady) {
+            gameRef.update(updates);
+        } else {
+            Object.keys(updates).forEach(function(path) {
+                var parts = path.split('/');
+                var obj = gameData;
+                for (var i = 0; i < parts.length - 1; i++) {
+                    if (!obj[parts[i]]) obj[parts[i]] = {};
+                    obj = obj[parts[i]];
+                }
+                obj[parts[parts.length - 1]] = updates[path];
+            });
+            saveLocalData();
+            renderAll();
+        }
+    }
+
+    // ========== TABS ==========
+    document.querySelectorAll('.tab-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var panelId = this.getAttribute('data-panel');
+            document.querySelectorAll('.panel').forEach(function(p) { p.classList.remove('active'); });
+            document.querySelectorAll('.tab-btn').forEach(function(b) {
+                b.classList.remove('active');
+                b.setAttribute('aria-selected', 'false');
+            });
+            document.getElementById(panelId).classList.add('active');
+            this.classList.add('active');
+            this.setAttribute('aria-selected', 'true');
+        });
+    });
+
+    // ========== PLAYERS ==========
+    document.getElementById('add-player-btn').addEventListener('click', addPlayer);
+    document.getElementById('new-player').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') addPlayer();
+    });
+
+    // Self-registration from prediction page
+    document.getElementById('pred-player-join-btn').addEventListener('click', joinGame);
+    document.getElementById('pred-player-new').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') joinGame();
+    });
+
+    function joinGame() {
+        var input = document.getElementById('pred-player-new');
+        var name = input.value.trim();
+        if (!name) return showToast('Please type your name');
+        if (gameData.players && gameData.players.find(function(p) { return p.toLowerCase() === name.toLowerCase(); })) {
+            // Already exists - just select them
+            document.getElementById('pred-player').value = name;
+            input.value = '';
+            showToast('Welcome back, ' + name + '!');
+            return;
+        }
+        if (gameData.players && gameData.players.length >= 150) return showToast('Game is full (150 players max)');
+        if (!gameData.players) gameData.players = [];
+        gameData.players.push(name);
+        persistData('players', gameData.players);
+        input.value = '';
+        // Select the newly added player
+        setTimeout(function() {
+            document.getElementById('pred-player').value = name;
+        }, 100);
+        showToast('Welcome, ' + name + '! You\'re in the game.');
+    }
+
+    function addPlayer() {
+        if (!isAdminUnlocked) return showToast('Admin access required');
+        var input = document.getElementById('new-player');
+        var name = input.value.trim();
+        if (!name) return showToast('Please enter a name');
+        if (gameData.players.length >= 150) return showToast('Maximum 150 players');
+        if (gameData.players.find(function(p) { return p.toLowerCase() === name.toLowerCase(); })) {
+            return showToast('Player already exists');
+        }
+        gameData.players.push(name);
+        persistData('players', gameData.players);
+        input.value = '';
+        showToast(name + ' added!');
+    }
+
+    function removePlayer(name) {
+        if (!isAdminUnlocked) return showToast('Admin access required');
+        if (!confirm('Remove ' + name + '? Their predictions will also be removed.')) return;
+        gameData.players = gameData.players.filter(function(p) { return p !== name; });
+        if (gameData.predictions) {
+            Object.keys(gameData.predictions).forEach(function(key) {
+                if (gameData.predictions[key] && gameData.predictions[key].player === name) {
+                    delete gameData.predictions[key];
+                }
+            });
+        }
+        if (firebaseReady) {
+            gameRef.update({ players: gameData.players, predictions: gameData.predictions });
+        } else {
+            saveLocalData();
+            renderAll();
+        }
+        showToast(name + ' removed');
+    }
+
+    // ========== PREDICTIONS ==========
+    document.getElementById('pred-stage').addEventListener('change', function() {
+        populateMatchDropdown(document.getElementById('pred-match-select'), this.value);
+        // Reset team dropdown when stage changes
+        document.getElementById('pred-team').innerHTML = '<option value="">Select match first...</option>';
+    });
+    document.getElementById('res-stage').addEventListener('change', function() {
+        populateMatchDropdown(document.getElementById('res-match-select'), this.value);
+    });
+
+    // When a match is selected, populate the team dropdown with the two teams
+    document.getElementById('pred-match-select').addEventListener('change', function() {
+        var matchName = this.value;
+        var teamSelect = document.getElementById('pred-team');
+        if (!matchName) {
+            teamSelect.innerHTML = '<option value="">Select match first...</option>';
+            return;
+        }
+        var teams = extractTeamsFromMatch(matchName);
+        if (teams.length > 0) {
+            teamSelect.innerHTML = '<option value="">Pick the winner...</option>' +
+                teams.map(function(t) { return '<option value="' + t + '">' + t + '</option>'; }).join('') +
+                '<option value="Draw">Draw</option>';
+        } else {
+            teamSelect.innerHTML = '<option value="">Pick the winner...</option><option value="Draw">Draw</option>';
+        }
+    });
+
+    // Extract team names from a match string like "Brazil vs Morocco (Group C)" or "M73: 2nd Group A vs 2nd Group B"
+    function extractTeamsFromMatch(matchStr) {
+        // Remove match number prefix like "M73: " or "QF1: "
+        var cleaned = matchStr.replace(/^[A-Z0-9]+:\s*/, '');
+        // Remove group/venue suffix like "(Group A)" or "— venue"
+        cleaned = cleaned.replace(/\s*\(.*?\)\s*$/, '').replace(/\s*—.*$/, '').trim();
+        // Split by " vs "
+        var parts = cleaned.split(/\s+vs\s+/i);
+        if (parts.length === 2) {
+            return [parts[0].trim(), parts[1].trim()];
+        }
+        return [];
+    }
+
+    function populateMatchDropdown(selectEl, stage) {
+        var matches = getEffectiveMatches(stage);
+        if (matches.length > 0) {
+            selectEl.innerHTML = '<option value="">Select match...</option>' +
+                matches.map(function(m) {
+                    return '<option value="' + m.match + '">' + m.match + ' — ' + m.venue + '</option>';
+                }).join('');
+        } else if (fixtureOverrides[stage]) {
+            // Stage exists only in Firebase (no hardcoded matches)
+            var fbMatches = [];
+            Object.keys(fixtureOverrides[stage]).forEach(function(key) {
+                if (fixtureOverrides[stage][key] && fixtureOverrides[stage][key].match) {
+                    fbMatches.push(fixtureOverrides[stage][key]);
+                }
+            });
+            selectEl.innerHTML = '<option value="">Select match...</option>' +
+                fbMatches.map(function(m) {
+                    return '<option value="' + m.match + '">' + m.match + ' — ' + (m.venue || '') + '</option>';
+                }).join('');
+        } else {
+            selectEl.innerHTML = '<option value="">Select date first...</option>';
+        }
+    }
+
+    document.getElementById('submit-prediction-btn').addEventListener('click', function() {
+        var player = document.getElementById('pred-player').value;
+        var stage = document.getElementById('pred-stage').value;
+        var match = document.getElementById('pred-match-select').value;
+        var team = document.getElementById('pred-team').value;
+
+        if (!player || !stage || !match || !team) return showToast('Please fill in all fields');
+
+        // Check if game has ended (winner declared)
+        if (gameData.winner) return showToast('The game is over! No more predictions allowed.');
+
+        // Check if result already recorded for this match
+        var resultKey = (stage + '|' + match).toLowerCase();
+        var alreadyScored = false;
+        if (gameData.results) {
+            Object.keys(gameData.results).forEach(function(k) {
+                var r = gameData.results[k];
+                if (r && (r.stage + '|' + r.match).toLowerCase() === resultKey) {
+                    alreadyScored = true;
+                }
+            });
+        }
+        if (alreadyScored) return showToast('This match has already been played. Cannot predict.');
+
+        // Create unique key for this prediction (player + stage + match)
+        var predKey = btoa(unescape(encodeURIComponent(player + '|' + stage + '|' + match))).replace(/[.#$/\[\]]/g, '_');
+
+        persistData('predictions/' + predKey, {
+            player: player,
+            stage: stage,
+            match: match,
+            team: team,
+            scored: false,
+            correct: false,
+            timestamp: Date.now()
+        });
+
+        document.getElementById('pred-team').innerHTML = '<option value="">Select match first...</option>';
+        showToast('Prediction submitted!');
+    });
+
+    // ========== RESULTS (MANUAL) ==========
+    document.getElementById('record-result-btn').addEventListener('click', function() {
+        if (!isAdminUnlocked) return showToast('Admin access required');
+        var stage = document.getElementById('res-stage').value;
+        var match = document.getElementById('res-match-select').value;
+        var winner = document.getElementById('res-winner').value.trim();
+
+        if (!stage || !match || !winner) return showToast('Please fill in all fields');
+
+        recordResultAndScore(stage, match, winner);
+        document.getElementById('res-winner').value = '';
+    });
+
+    function recordResultAndScore(stage, match, winner) {
+        var resultKey = btoa(unescape(encodeURIComponent(stage + '|' + match))).replace(/[.#$/\[\]]/g, '_');
+
+        persistData('results/' + resultKey, {
+            stage: stage,
+            match: match,
+            winner: winner,
+            timestamp: Date.now()
+        });
+
+        // Score all predictions for this match
+        var scored = 0;
+        if (gameData.predictions) {
+            var updates = {};
+            Object.keys(gameData.predictions).forEach(function(key) {
+                var pred = gameData.predictions[key];
+                if (pred && pred.stage === stage && pred.match.toLowerCase() === match.toLowerCase() && !pred.scored) {
+                    updates['predictions/' + key + '/scored'] = true;
+                    if (pred.team.toLowerCase() === winner.toLowerCase()) {
+                        updates['predictions/' + key + '/correct'] = true;
+                        scored++;
+                    } else {
+                        updates['predictions/' + key + '/correct'] = false;
+                    }
+                }
+            });
+            if (Object.keys(updates).length > 0) {
+                persistUpdate(updates);
+            }
+        }
+        showToast('Result recorded! ' + scored + ' correct prediction(s).');
+    }
+
+    // ========== FETCH RESULTS FROM API ==========
+    document.getElementById('fetch-results-btn').addEventListener('click', fetchLiveResults);
+
+    async function fetchLiveResults() {
+        if (!isAdminUnlocked) return showToast('Admin access required — unlock in Manage tab');
+        var statusEl = document.getElementById('fetch-status');
+        statusEl.textContent = '⏳ Fetching results and upcoming fixtures...';
+
+        if (CONFIG.footballApi.key === 'YOUR_API_FOOTBALL_KEY') {
+            statusEl.textContent = '⚠️ Please configure your API key in the CONFIG section of index.html';
+            return;
+        }
+
+        try {
+            var newResults = 0;
+            var fixturesUpdated = 0;
+
+            // 1. Fetch FINISHED matches and score predictions
+            var response = await fetch(CONFIG.footballApi.baseUrl + '/fixtures?league=' + CONFIG.footballApi.leagueId + '&season=' + CONFIG.footballApi.season + '&status=FT-AET-PEN', {
+                headers: { 'x-apisports-key': CONFIG.footballApi.key }
+            });
+            var data = await response.json();
+
+            if (data.response && data.response.length > 0) {
+                data.response.forEach(function(fixture) {
+                    var homeTeam = fixture.teams.home.name;
+                    var awayTeam = fixture.teams.away.name;
+                    var winner = fixture.teams.home.winner ? homeTeam : (fixture.teams.away.winner ? awayTeam : null);
+                    if (!winner) return; // Skip draws (penalties decide winner in knockouts)
+
+                    // Find matching preloaded fixture (check both hardcoded and overrides)
+                    var matchedStage = null;
+                    var matchedFixture = null;
+                    Object.keys(PRELOADED_MATCHES).forEach(function(stage) {
+                        var matches = getEffectiveMatches(stage);
+                        matches.forEach(function(m) {
+                            var fixtureLower = m.match.toLowerCase();
+                            if (fixtureLower.indexOf(homeTeam.toLowerCase()) >= 0 &&
+                                fixtureLower.indexOf(awayTeam.toLowerCase()) >= 0) {
+                                var rKey = btoa(unescape(encodeURIComponent(stage + '|' + m.match))).replace(/[.#$/\[\]]/g, '_');
+                                if (!gameData.results || !gameData.results[rKey]) {
+                                    matchedStage = stage;
+                                    matchedFixture = m.match;
+                                }
+                            }
+                        });
+                    });
+
+                    // Fallback: match by either team name appearing
+                    if (!matchedStage) {
+                        Object.keys(PRELOADED_MATCHES).forEach(function(stage) {
+                            var matches = getEffectiveMatches(stage);
+                            matches.forEach(function(m) {
+                                var fixtureLower = m.match.toLowerCase();
+                                if (fixtureLower.indexOf(homeTeam.toLowerCase()) >= 0 ||
+                                    fixtureLower.indexOf(awayTeam.toLowerCase()) >= 0) {
+                                    var rKey = btoa(unescape(encodeURIComponent(stage + '|' + m.match))).replace(/[.#$/\[\]]/g, '_');
+                                    if (!gameData.results || !gameData.results[rKey]) {
+                                        matchedStage = stage;
+                                        matchedFixture = m.match;
+                                    }
+                                }
+                            });
+                        });
+                    }
+
+                    if (matchedStage && matchedFixture) {
+                        recordResultAndScore(matchedStage, matchedFixture, winner);
+                        newResults++;
+                    }
+                });
+            }
+
+            // 2. Fetch UPCOMING/SCHEDULED fixtures to populate knockout round team names
+            var upcomingResp = await fetch(CONFIG.footballApi.baseUrl + '/fixtures?league=' + CONFIG.footballApi.leagueId + '&season=' + CONFIG.footballApi.season + '&status=NS-TBD', {
+                headers: { 'x-apisports-key': CONFIG.footballApi.key }
+            });
+            var upcomingData = await upcomingResp.json();
+
+            if (upcomingData.response && upcomingData.response.length > 0) {
+                upcomingData.response.forEach(function(fixture) {
+                    var homeTeam = fixture.teams.home.name;
+                    var awayTeam = fixture.teams.away.name;
+                    var matchDate = new Date(fixture.fixture.date);
+                    var round = (fixture.league.round || '').toLowerCase();
+
+                    // Only update knockout fixtures (these start as placeholders like "M73: 2nd Group A vs 2nd Group B")
+                    if (homeTeam === 'TBD' || awayTeam === 'TBD') return;
+
+                    // Determine which stage this belongs to based on date
+                    var stage = getStageFromDate(matchDate, round);
+                    if (!stage) return;
+
+                    // Check if this fixture matches a placeholder in our preloaded data
+                    var preloaded = PRELOADED_MATCHES[stage];
+                    if (!preloaded) return;
+
+                    var realMatchName = homeTeam + ' vs ' + awayTeam;
+
+                    // Find the placeholder fixture at the same index (by match number or position)
+                    for (var idx = 0; idx < preloaded.length; idx++) {
+                        var currentName = preloaded[idx].match;
+                        // Check if override already exists with real team names
+                        var overrideName = (fixtureOverrides[stage] && fixtureOverrides[stage][idx] && fixtureOverrides[stage][idx].match) || currentName;
+
+                        // Only update if current name is still a placeholder (contains "Group" or "Winner" or "Best 3rd")
+                        if (overrideName.indexOf('Group') >= 0 || overrideName.indexOf('Winner') >= 0 || overrideName.indexOf('Best 3rd') >= 0 || overrideName.indexOf('QF') >= 0 || overrideName.indexOf('SF') >= 0) {
+                            // Match by venue or match number pattern
+                            var venue = preloaded[idx].venue;
+                            var fixtureVenue = fixture.fixture.venue ? fixture.fixture.venue.name : '';
+
+                            // Try to match by venue name similarity
+                            if (fixtureVenue && venue && fixtureVenue.toLowerCase().indexOf(venue.split(',')[0].toLowerCase().trim()) >= 0) {
+                                var fData = { match: realMatchName, venue: preloaded[idx].venue };
+                                if (firebaseReady) {
+                                    db.ref('fixtures/' + stage + '/' + idx).set(fData);
+                                } else {
+                                    if (!fixtureOverrides[stage]) fixtureOverrides[stage] = {};
+                                    fixtureOverrides[stage][idx] = fData;
+                                }
+                                fixturesUpdated++;
+                                break;
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Save fixture overrides locally if not using Firebase
+            if (!firebaseReady && fixturesUpdated > 0) {
+                localStorage.setItem('wc2026_fixtures', JSON.stringify(fixtureOverrides));
+                renderAll();
+            }
+
+            statusEl.textContent = '✅ Done! ' + newResults + ' result(s) scored, ' + fixturesUpdated + ' fixture name(s) updated.';
+        } catch (err) {
+            statusEl.textContent = '❌ Error: ' + err.message;
+        }
+    }
+
+    // Helper: get the effective match list for a stage (merging hardcoded + overrides)
+    function getEffectiveMatches(stage) {
+        if (!PRELOADED_MATCHES[stage]) return [];
+        return PRELOADED_MATCHES[stage].map(function(m, idx) {
+            var override = fixtureOverrides[stage] && fixtureOverrides[stage][idx];
+            return {
+                match: (override && override.match) ? override.match : m.match,
+                venue: (override && override.venue) ? override.venue : m.venue
+            };
+        });
+    }
+
+    // Helper: determine stage key from a fixture date and round string
+    function getStageFromDate(date, round) {
+        var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        var days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+        var dayName = days[date.getDay()];
+        var monthName = months[date.getMonth()];
+        var dayNum = date.getDate();
+
+        var prefix = '';
+        if (round.indexOf('group') >= 0) prefix = 'Group Stage';
+        else if (round.indexOf('round of 32') >= 0 || round.indexOf('32') >= 0) prefix = 'Round of 32';
+        else if (round.indexOf('round of 16') >= 0 || round.indexOf('16') >= 0) prefix = 'Round of 16';
+        else if (round.indexOf('quarter') >= 0) prefix = 'Quarter-Finals';
+        else if (round.indexOf('semi') >= 0) prefix = 'Semi-Finals';
+        else if (round.indexOf('3rd') >= 0 || round.indexOf('third') >= 0) prefix = 'Third Place';
+        else if (round.indexOf('final') >= 0 && round.indexOf('semi') < 0 && round.indexOf('quarter') < 0) prefix = 'Final';
+        else {
+            // Fallback: determine by date range
+            if (date <= new Date('2026-06-27')) prefix = 'Group Stage';
+            else if (date <= new Date('2026-07-03')) prefix = 'Round of 32';
+            else if (date <= new Date('2026-07-07')) prefix = 'Round of 16';
+            else if (date <= new Date('2026-07-11')) prefix = 'Quarter-Finals';
+            else if (date <= new Date('2026-07-15')) prefix = 'Semi-Finals';
+            else if (date <= new Date('2026-07-18')) prefix = 'Third Place';
+            else prefix = 'Final';
+        }
+
+        var stageKey = prefix + ' - ' + dayName + ' ' + monthName + ' ' + dayNum;
+        // Verify it exists in our STAGES array
+        if (STAGES.indexOf(stageKey) >= 0) return stageKey;
+        return null;
+    }
+
+    // ========== ADMIN UNLOCK ==========
+    // Double-click the header to reveal the Manage tab
+    document.querySelector('header h1').addEventListener('dblclick', function() {
+        var pin = prompt('Enter admin PIN:');
+        if (pin === ADMIN_PIN) {
+            isAdminUnlocked = true;
+            document.getElementById('manage-tab-btn').style.display = '';
+            document.getElementById('admin-section').style.display = 'block';
+            // Show admin controls on Results tab
+            document.getElementById('manual-result-section').style.display = 'block';
+            document.getElementById('manual-result-locked').style.display = 'none';
+            document.getElementById('declare-winner-btn').style.display = '';
+            document.getElementById('declare-winner-locked').style.display = 'none';
+            renderRemovePlayerDropdown();
+            showToast('Admin unlocked! Manage tab is now visible.');
+        } else if (pin !== null) {
+            showToast('Incorrect PIN');
+        }
+    });
+
+    document.getElementById('admin-unlock-btn').addEventListener('click', unlockAdmin);
+    document.getElementById('admin-pin-input').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') unlockAdmin();
+    });
+
+    function unlockAdmin() {
+        var pin = document.getElementById('admin-pin-input').value;
+        if (pin === ADMIN_PIN) {
+            isAdminUnlocked = true;
+            document.getElementById('admin-section').style.display = 'block';
+            document.getElementById('admin-pin-input').value = '';
+            document.getElementById('manage-tab-btn').style.display = '';
+            // Show admin controls on Results tab
+            document.getElementById('manual-result-section').style.display = 'block';
+            document.getElementById('manual-result-locked').style.display = 'none';
+            document.getElementById('declare-winner-btn').style.display = '';
+            document.getElementById('declare-winner-locked').style.display = 'none';
+            renderRemovePlayerDropdown();
+            showToast('Admin unlocked!');
+        } else {
+            showToast('Incorrect PIN');
+        }
+    }
+
+    function renderRemovePlayerDropdown() {
+        var sel = document.getElementById('remove-player-select');
+        sel.innerHTML = '<option value="">Select player...</option>' +
+            (gameData.players || []).map(function(p) {
+                return '<option value="' + p + '">' + p + '</option>';
+            }).join('');
+    }
+
+    document.getElementById('remove-player-btn').addEventListener('click', function() {
+        if (!isAdminUnlocked) return showToast('Admin access required');
+        var name = document.getElementById('remove-player-select').value;
+        if (!name) return showToast('Select a player first');
+        removePlayer(name);
+        renderRemovePlayerDropdown();
+    });
+
+    // ========== UPDATE FIXTURES LIVE ==========
+    document.getElementById('fix-stage').addEventListener('change', function() {
+        var stage = this.value;
+        var sel = document.getElementById('fix-match');
+        if (PRELOADED_MATCHES[stage]) {
+            var matches = PRELOADED_MATCHES[stage].map(function(m, idx) {
+                var override = fixtureOverrides[stage] && fixtureOverrides[stage][idx];
+                return (override && override.match) ? override.match : m.match;
+            });
+            sel.innerHTML = '<option value="">Select match...</option>' +
+                matches.map(function(m, i) {
+                    return '<option value="' + i + '">' + m + '</option>';
+                }).join('');
+        } else {
+            sel.innerHTML = '<option value="">Select date first...</option>';
+        }
+    });
+
+    document.getElementById('update-fixture-btn').addEventListener('click', function() {
+        if (!isAdminUnlocked) return showToast('Admin access required');
+        var stage = document.getElementById('fix-stage').value;
+        var matchIdx = document.getElementById('fix-match').value;
+        var newName = document.getElementById('fix-new-name').value.trim();
+        if (!stage || matchIdx === '' || !newName) return showToast('Fill all fields');
+
+        var originalMatch = PRELOADED_MATCHES[stage][parseInt(matchIdx)];
+        var fixtureData = { match: newName, venue: originalMatch ? originalMatch.venue : '' };
+
+        if (firebaseReady) {
+            db.ref('fixtures/' + stage + '/' + matchIdx).set(fixtureData);
+        } else {
+            if (!fixtureOverrides[stage]) fixtureOverrides[stage] = {};
+            fixtureOverrides[stage][matchIdx] = fixtureData;
+            localStorage.setItem('wc2026_fixtures', JSON.stringify(fixtureOverrides));
+            renderAll();
+        }
+        document.getElementById('fix-new-name').value = '';
+        showToast('Fixture updated!');
+    });
+
+    // ========== DECLARE WINNER ==========
+    document.getElementById('declare-winner-btn').addEventListener('click', function() {
+        if (!isAdminUnlocked) return showToast('Admin access required');
+        var scores = getScores();
+        if (scores.length === 0) return showToast('No players');
+        if (scores[0].points === 0) return showToast('No one has scored yet');
+        var winner = scores[0];
+        if (!confirm('Declare ' + winner.name + ' as the winner with ' + winner.points + ' points?')) return;
+        persistData('winner', winner);
+        showToast('🏆 ' + winner.name + ' is the champion!');
+    });
+
+    // ========== RESET ==========
+    document.getElementById('reset-game-btn').addEventListener('click', function() {
+        if (!isAdminUnlocked) return showToast('Admin access required');
+        if (!confirm('Delete ALL data for everyone?')) return;
+        if (!confirm('Really? This cannot be undone.')) return;
+        if (firebaseReady) {
+            gameRef.set(null);
+        } else {
+            localStorage.removeItem(STORAGE_KEY);
+            gameData = { players: [], predictions: {}, results: {}, winner: null };
+            renderAll();
+        }
+        showToast('Game reset');
+    });
+
+    // ========== SCORING ==========
+    function getScores() {
+        var scores = {};
+        (gameData.players || []).forEach(function(p) { scores[p] = 0; });
+        if (gameData.predictions) {
+            Object.keys(gameData.predictions).forEach(function(key) {
+                var pred = gameData.predictions[key];
+                if (pred && pred.correct) {
+                    var multiplier = getStageMultiplier(pred.stage);
+                    scores[pred.player] = (scores[pred.player] || 0) + multiplier;
+                }
+            });
+        }
+        return Object.keys(scores)
+            .map(function(name) { return { name: name, points: scores[name] }; })
+            .sort(function(a, b) { return b.points - a.points; });
+    }
+
+    // ========== RENDER ==========
+    function renderAll() {
+        // Save current form selections before re-rendering
+        var predMatchSel = document.getElementById('pred-match-select');
+        var resMatchSel = document.getElementById('res-match-select');
+        var predMatchVal = predMatchSel.value;
+        var resMatchVal = resMatchSel.value;
+
+        renderPlayers();
+        renderPlayerDropdown();
+        renderStageDropdowns();
+
+        // Re-populate match dropdowns based on preserved stage selection
+        var predStageVal = document.getElementById('pred-stage').value;
+        var resStageVal = document.getElementById('res-stage').value;
+        if (predStageVal) {
+            populateMatchDropdown(predMatchSel, predStageVal);
+            if (predMatchVal) predMatchSel.value = predMatchVal;
+        }
+        if (resStageVal) {
+            populateMatchDropdown(resMatchSel, resStageVal);
+            if (resMatchVal) resMatchSel.value = resMatchVal;
+        }
+
+        renderDashboard();
+        renderLeaderboard('dashboard-leaderboard', 5);
+        renderLeaderboard('full-leaderboard', null);
+        renderPlayerBreakdown();
+        renderResults();
+
+        // Disable predictions if game is over
+        var submitBtn = document.getElementById('submit-prediction-btn');
+        if (gameData.winner) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = '🏆 Game Over — Predictions Closed';
+            submitBtn.style.opacity = '0.5';
+        } else {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Submit Prediction';
+            submitBtn.style.opacity = '1';
+        }
+    }
+
+    function renderPlayers() {
+        var container = document.getElementById('players-list');
+        var countEl = document.getElementById('player-count');
+        if (!gameData.players || gameData.players.length === 0) {
+            container.innerHTML = '<p style="color:#a0aec0;">No players have joined yet.</p>';
+            if (countEl) countEl.textContent = '0 / 150 players';
+            return;
+        }
+        container.innerHTML = gameData.players.map(function(p) {
+            return '<span class="player-chip">' + p + '</span>';
+        }).join('');
+        if (countEl) countEl.textContent = gameData.players.length + ' / 150 players';
+    }
+
+    function renderPlayerDropdown() {
+        var sel = document.getElementById('pred-player');
+        var currentVal = sel.value;
+        sel.innerHTML = '<option value="">Select your name...</option>' +
+            (gameData.players || []).map(function(p) {
+                return '<option value="' + p + '">' + p + '</option>';
+            }).join('');
+        if (currentVal) sel.value = currentVal;
+    }
+
+    function renderStageDropdowns() {
+        var predStage = document.getElementById('pred-stage');
+        var resStage = document.getElementById('res-stage');
+        var fixStage = document.getElementById('fix-stage');
+        var predVal = predStage.value;
+        var resVal = resStage.value;
+        var fixVal = fixStage.value;
+        var options = '<option value="">Select date...</option>' +
+            STAGES.map(function(s) { return '<option value="' + s + '">' + s + '</option>'; }).join('');
+        predStage.innerHTML = options;
+        resStage.innerHTML = options;
+        fixStage.innerHTML = options;
+        // Preserve selections
+        if (predVal) predStage.value = predVal;
+        if (resVal) resStage.value = resVal;
+        if (fixVal) fixStage.value = fixVal;
+    }
+
+    function renderLeaderboard(containerId, limit) {
+        var scores = getScores();
+        var container = document.getElementById(containerId);
+        if (scores.length === 0) {
+            container.innerHTML = '<div class="empty-state"><div class="emoji">📊</div><p>Add players to see the leaderboard</p></div>';
+            return;
+        }
+        var display = limit ? scores.slice(0, limit) : scores;
+        var trophies = ['🥇', '🥈', '🥉'];
+        container.innerHTML =
+            '<table class="leaderboard-table"><thead><tr><th>Rank</th><th>Player</th><th>Points</th></tr></thead><tbody>' +
+            display.map(function(s, i) {
+                return '<tr><td class="rank-' + (i+1) + '">' + (trophies[i] || (i+1)) + '</td>' +
+                    '<td>' + s.name + '</td><td><strong>' + s.points + '</strong></td></tr>';
+            }).join('') + '</tbody></table>';
+    }
+
+    function renderPlayerBreakdown() {
+        var container = document.getElementById('player-breakdown');
+        if (!gameData.players || gameData.players.length === 0) {
+            container.innerHTML = '<p style="color:#a0aec0;">No players yet.</p>';
+            return;
+        }
+        var scores = getScores();
+        container.innerHTML = gameData.players.map(function(player) {
+            var preds = [], correct = 0, scored = 0;
+            if (gameData.predictions) {
+                Object.keys(gameData.predictions).forEach(function(k) {
+                    var p = gameData.predictions[k];
+                    if (p && p.player === player) {
+                        preds.push(p);
+                        if (p.scored) scored++;
+                        if (p.correct) correct++;
+                    }
+                });
+            }
+            var playerScore = scores.find(function(s) { return s.name === player; });
+            var pts = playerScore ? playerScore.points : 0;
+            return '<div class="prediction-item"><div class="prediction-info">' +
+                '<span class="player-name">' + player + '</span>' +
+                '<div class="prediction-detail">' + preds.length + ' predictions &bull; ' + scored + ' scored &bull; ' + correct + ' correct</div>' +
+                '</div><span class="badge ' + (correct > 0 ? 'badge-correct' : 'badge-pending') + '">' + pts + ' pts</span></div>';
+        }).join('');
+    }
+
+    function renderDashboard() {
+        var totalPredictions = gameData.predictions ? Object.keys(gameData.predictions).length : 0;
+        var correctPredictions = 0;
+        var totalResults = gameData.results ? Object.keys(gameData.results).length : 0;
+        if (gameData.predictions) {
+            Object.keys(gameData.predictions).forEach(function(k) {
+                if (gameData.predictions[k] && gameData.predictions[k].correct) correctPredictions++;
+            });
+        }
+
+        document.getElementById('stats-grid').innerHTML =
+            '<div class="stat-card"><div class="stat-value">' + (gameData.players||[]).length + '</div><div class="stat-label">Players</div></div>' +
+            '<div class="stat-card"><div class="stat-value">' + totalPredictions + '</div><div class="stat-label">Predictions</div></div>' +
+            '<div class="stat-card"><div class="stat-value">' + totalResults + '</div><div class="stat-label">Results</div></div>' +
+            '<div class="stat-card"><div class="stat-value">' + correctPredictions + '</div><div class="stat-label">Correct</div></div>';
+
+        // Prediction percentages (visible to all)
+        renderPredictionPercentages();
+
+        // Recent predictions (admin only)
+        var adminRecentCard = document.getElementById('admin-recent-predictions');
+        if (isAdminUnlocked) {
+            adminRecentCard.style.display = 'block';
+            var recent = [];
+            if (gameData.predictions) {
+                Object.keys(gameData.predictions).forEach(function(k) {
+                    var p = gameData.predictions[k];
+                    if (p) { p._key = k; recent.push(p); }
+                });
+            }
+            recent.sort(function(a,b) { return (b.timestamp||0) - (a.timestamp||0); });
+            recent = recent.slice(0, 10);
+
+            var recentContainer = document.getElementById('recent-predictions');
+            if (recent.length === 0) {
+                recentContainer.innerHTML = '<div class="empty-state"><div class="emoji">🎯</div><p>No predictions yet!</p></div>';
+            } else {
+                recentContainer.innerHTML = recent.map(function(p) {
+                    var status, badgeClass;
+                    if (!p.scored) { status = 'Pending'; badgeClass = 'badge-pending'; }
+                    else if (p.correct) { status = '✓ Correct'; badgeClass = 'badge-correct'; }
+                    else { status = '✗ Wrong'; badgeClass = 'badge-wrong'; }
+                    return '<div class="prediction-item"><div class="prediction-info">' +
+                        '<span class="player-name">' + p.player + '</span>' +
+                        '<div class="prediction-detail">' + p.stage + ' &bull; ' + p.match + ' &rarr; ' + p.team + '</div>' +
+                        '</div><span class="badge ' + badgeClass + '">' + status + '</span></div>';
+                }).join('');
+            }
+        } else {
+            adminRecentCard.style.display = 'none';
+        }
+
+        // Winner
+        var winnerSection = document.getElementById('winner-section');
+        if (gameData.winner) {
+            winnerSection.innerHTML = '<div class="winner-banner"><h2>🏆 ' + gameData.winner.name + ' Wins! 🏆</h2>' +
+                '<p>Champion with <strong>' + gameData.winner.points + ' points</strong></p></div>';
+        } else { winnerSection.innerHTML = ''; }
+    }
+
+    function renderResults() {
+        var container = document.getElementById('results-list');
+        if (!gameData.results || Object.keys(gameData.results).length === 0) {
+            container.innerHTML = '<p style="color:#a0aec0;">No results recorded yet.</p>';
+            return;
+        }
+        var results = [];
+        Object.keys(gameData.results).forEach(function(k) {
+            var r = gameData.results[k];
+            if (r) results.push(r);
+        });
+        results.sort(function(a,b) { return (b.timestamp||0) - (a.timestamp||0); });
+        container.innerHTML = results.map(function(r) {
+            return '<div class="prediction-item"><div class="prediction-info">' +
+                '<span class="player-name">' + r.match + '</span>' +
+                '<div class="prediction-detail">' + r.stage + ' &bull; Winner: <strong>' + r.winner + '</strong></div>' +
+                '</div></div>';
+        }).join('');
+    }
+
+    // ========== PREDICTION PERCENTAGES ==========
+    function renderPredictionPercentages() {
+        var container = document.getElementById('prediction-percentages');
+        if (!gameData.predictions || Object.keys(gameData.predictions).length === 0) {
+            container.innerHTML = '<div class="empty-state"><div class="emoji">🎯</div><p>No predictions yet. Join and start predicting!</p></div>';
+            return;
+        }
+
+        // Group predictions by match
+        var matchPredictions = {};
+        Object.keys(gameData.predictions).forEach(function(k) {
+            var pred = gameData.predictions[k];
+            if (!pred) return;
+            var key = pred.stage + '|' + pred.match;
+            if (!matchPredictions[key]) {
+                matchPredictions[key] = { stage: pred.stage, match: pred.match, votes: {} };
+            }
+            var team = pred.team;
+            matchPredictions[key].votes[team] = (matchPredictions[key].votes[team] || 0) + 1;
+        });
+
+        // Sort by stage order (most recent first)
+        var matchKeys = Object.keys(matchPredictions);
+        matchKeys.sort(function(a, b) {
+            var stageA = STAGES.indexOf(matchPredictions[a].stage);
+            var stageB = STAGES.indexOf(matchPredictions[b].stage);
+            return stageB - stageA;
+        });
+
+        // Show the most recent matches with predictions (limit to 10)
+        var display = matchKeys.slice(0, 10);
+
+        container.innerHTML = display.map(function(key) {
+            var mp = matchPredictions[key];
+            var totalVotes = 0;
+            Object.keys(mp.votes).forEach(function(t) { totalVotes += mp.votes[t]; });
+
+            // Sort teams by vote count
+            var teams = Object.keys(mp.votes).sort(function(a, b) { return mp.votes[b] - mp.votes[a]; });
+
+            var colors = ['pct-fill-a', 'pct-fill-b', 'pct-fill-draw'];
+
+            var bars = teams.map(function(team, idx) {
+                var count = mp.votes[team];
+                var pct = totalVotes > 0 ? Math.round(count / totalVotes * 100) : 0;
+                var colorClass = idx < 2 ? colors[idx] : colors[2];
+                return '<div class="pct-bar-row">' +
+                    '<span class="pct-label">' + team + '</span>' +
+                    '<div class="pct-bar"><div class="pct-fill ' + colorClass + '" style="width:' + Math.max(pct, 8) + '%;">' + pct + '%</div></div>' +
+                    '</div>';
+            }).join('');
+
+            return '<div class="pct-match">' +
+                '<div class="pct-match-title">' + mp.match + '</div>' +
+                bars +
+                '<div style="font-size:0.7rem;color:#999;margin-top:4px;">' + totalVotes + ' prediction' + (totalVotes !== 1 ? 's' : '') + '</div>' +
+                '</div>';
+        }).join('');
+    }
+
+    // ========== INITIAL RENDER (always runs, even if Firebase is pending) ==========
+    // Load from localStorage first so the page is usable immediately
+    gameData = loadLocalData();
+    renderAll();
+
+    // Also ensure stage dropdowns are populated even if renderAll had issues
+    (function() {
+        var options = '<option value="">Select date...</option>' +
+            STAGES.map(function(s) { return '<option value="' + s + '">' + s + '</option>'; }).join('');
+        var ps = document.getElementById('pred-stage');
+        var rs = document.getElementById('res-stage');
+        var fs = document.getElementById('fix-stage');
+        if (ps && ps.options.length <= 1) ps.innerHTML = options;
+        if (rs && rs.options.length <= 1) rs.innerHTML = options;
+        if (fs && fs.options.length <= 1) fs.innerHTML = options;
+    })();
+    </script>
+</body>
+</html>
