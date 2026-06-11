@@ -1461,6 +1461,21 @@
         if (fixVal) fixStage.value = fixVal;
     }
 
+    function getLeaderboardLimit() {
+        // Determine current tournament phase based on recorded results
+        var hasR16Result = false;
+        if (gameData.results) {
+            Object.keys(gameData.results).forEach(function(k) {
+                var r = gameData.results[k];
+                if (r && r.stage && r.stage.indexOf('Round of 16') === 0) hasR16Result = true;
+            });
+        }
+        // Once Round of 16 results start coming in, show only top 5
+        if (hasR16Result) return 5;
+        // Otherwise show top 10
+        return 10;
+    }
+
     function renderLeaderboard(containerId, limit) {
         var scores = getScores();
         var container = document.getElementById(containerId);
@@ -1468,9 +1483,21 @@
             container.innerHTML = '<div class="empty-state"><div class="emoji">📊</div><p>Add players to see the leaderboard</p></div>';
             return;
         }
-        var display = limit ? scores.slice(0, limit) : scores;
+
+        // Only show players who have scored points
+        var scoredPlayers = scores.filter(function(s) { return s.points > 0; });
+        if (scoredPlayers.length === 0) {
+            container.innerHTML = '<div class="empty-state"><div class="emoji">⏳</div><p>No scores yet — leaderboard will appear once results are in</p></div>';
+            return;
+        }
+
+        // Use dynamic limit based on tournament stage
+        var dynamicLimit = getLeaderboardLimit();
+        var effectiveLimit = limit ? Math.min(limit, dynamicLimit) : dynamicLimit;
+        var display = scoredPlayers.slice(0, effectiveLimit);
         var trophies = ['🥇', '🥈', '🥉'];
         container.innerHTML =
+            '<p style="color:#ccc;font-size:0.8rem;margin-bottom:8px;">Showing top ' + Math.min(effectiveLimit, scoredPlayers.length) + ' players</p>' +
             '<table class="leaderboard-table"><thead><tr><th>Rank</th><th>Player</th><th>Points</th></tr></thead><tbody>' +
             display.map(function(s, i) {
                 return '<tr><td class="rank-' + (i+1) + '">' + (trophies[i] || (i+1)) + '</td>' +
