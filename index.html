@@ -155,6 +155,15 @@
         }
         .sync-status.offline { color: #fc8181; }
         .loading { text-align: center; padding: 20px; color: #a0aec0; }
+        .pct-match { margin-bottom: 15px; padding: 12px; background: rgba(0,0,0,0.3); border-radius: 8px; }
+        .pct-match-title { font-size: 0.85rem; color: #FFB81C; margin-bottom: 8px; font-weight: 600; }
+        .pct-bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+        .pct-label { font-size: 0.8rem; color: #fff; min-width: 100px; }
+        .pct-bar { flex: 1; height: 18px; background: rgba(255,255,255,0.1); border-radius: 9px; overflow: hidden; }
+        .pct-fill { height: 100%; border-radius: 9px; display: flex; align-items: center; justify-content: flex-end; padding-right: 6px; font-size: 0.7rem; font-weight: 600; color: #000; min-width: fit-content; }
+        .pct-fill-a { background: #FFB81C; }
+        .pct-fill-b { background: #68d391; }
+        .pct-fill-draw { background: #a0aec0; }
         .hero-banner {
             position: relative; border-radius: 16px; overflow: hidden;
             margin-bottom: 25px; height: 180px;
@@ -223,7 +232,12 @@
                 <div id="dashboard-leaderboard"></div>
             </div>
             <div class="card">
-                <h2>📋 Recent Predictions</h2>
+                <h2>� Prediction Stats</h2>
+                <p style="color: #ccc; margin-bottom: 10px; font-size: 0.85rem;">How the group is predicting each match</p>
+                <div id="prediction-percentages"></div>
+            </div>
+            <div class="card" id="admin-recent-predictions" style="display:none;">
+                <h2>�📋 Recent Predictions (Admin Only)</h2>
                 <div id="recent-predictions"></div>
             </div>
         </div>
@@ -399,9 +413,23 @@
 
     <div class="toast" id="toast"></div>
 
-    <!-- Firebase SDK (page works without it - falls back to localStorage) -->
+    <!-- Firebase SDK - multiple CDN fallbacks -->
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+    <script>
+    // Fallback: if gstatic blocked, try cdnjs
+    if (typeof firebase === 'undefined') {
+        document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.12.2/firebase-app-compat.min.js"><\/script>');
+        document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.12.2/firebase-database-compat.min.js"><\/script>');
+    }
+    </script>
+    <script>
+    // Fallback 2: if both blocked, try jsdelivr
+    if (typeof firebase === 'undefined') {
+        document.write('<script src="https://cdn.jsdelivr.net/npm/firebase@10.12.2/firebase-app-compat.js"><\/script>');
+        document.write('<script src="https://cdn.jsdelivr.net/npm/firebase@10.12.2/firebase-database-compat.js"><\/script>');
+    }
+    </script>
 
     <script>
     // ==========================================================
@@ -1494,31 +1522,40 @@
             '<div class="stat-card"><div class="stat-value">' + totalResults + '</div><div class="stat-label">Results</div></div>' +
             '<div class="stat-card"><div class="stat-value">' + correctPredictions + '</div><div class="stat-label">Correct</div></div>';
 
-        // Recent predictions
-        var recent = [];
-        if (gameData.predictions) {
-            Object.keys(gameData.predictions).forEach(function(k) {
-                var p = gameData.predictions[k];
-                if (p) { p._key = k; recent.push(p); }
-            });
-        }
-        recent.sort(function(a,b) { return (b.timestamp||0) - (a.timestamp||0); });
-        recent = recent.slice(0, 5);
+        // Prediction percentages (visible to all)
+        renderPredictionPercentages();
 
-        var recentContainer = document.getElementById('recent-predictions');
-        if (recent.length === 0) {
-            recentContainer.innerHTML = '<div class="empty-state"><div class="emoji">🎯</div><p>No predictions yet!</p></div>';
+        // Recent predictions (admin only)
+        var adminRecentCard = document.getElementById('admin-recent-predictions');
+        if (isAdminUnlocked) {
+            adminRecentCard.style.display = 'block';
+            var recent = [];
+            if (gameData.predictions) {
+                Object.keys(gameData.predictions).forEach(function(k) {
+                    var p = gameData.predictions[k];
+                    if (p) { p._key = k; recent.push(p); }
+                });
+            }
+            recent.sort(function(a,b) { return (b.timestamp||0) - (a.timestamp||0); });
+            recent = recent.slice(0, 10);
+
+            var recentContainer = document.getElementById('recent-predictions');
+            if (recent.length === 0) {
+                recentContainer.innerHTML = '<div class="empty-state"><div class="emoji">🎯</div><p>No predictions yet!</p></div>';
+            } else {
+                recentContainer.innerHTML = recent.map(function(p) {
+                    var status, badgeClass;
+                    if (!p.scored) { status = 'Pending'; badgeClass = 'badge-pending'; }
+                    else if (p.correct) { status = '✓ Correct'; badgeClass = 'badge-correct'; }
+                    else { status = '✗ Wrong'; badgeClass = 'badge-wrong'; }
+                    return '<div class="prediction-item"><div class="prediction-info">' +
+                        '<span class="player-name">' + p.player + '</span>' +
+                        '<div class="prediction-detail">' + p.stage + ' &bull; ' + p.match + ' &rarr; ' + p.team + '</div>' +
+                        '</div><span class="badge ' + badgeClass + '">' + status + '</span></div>';
+                }).join('');
+            }
         } else {
-            recentContainer.innerHTML = recent.map(function(p) {
-                var status, badgeClass;
-                if (!p.scored) { status = 'Pending'; badgeClass = 'badge-pending'; }
-                else if (p.correct) { status = '✓ Correct'; badgeClass = 'badge-correct'; }
-                else { status = '✗ Wrong'; badgeClass = 'badge-wrong'; }
-                return '<div class="prediction-item"><div class="prediction-info">' +
-                    '<span class="player-name">' + p.player + '</span>' +
-                    '<div class="prediction-detail">' + p.stage + ' &bull; ' + p.match + ' &rarr; ' + p.team + '</div>' +
-                    '</div><span class="badge ' + badgeClass + '">' + status + '</span></div>';
-            }).join('');
+            adminRecentCard.style.display = 'none';
         }
 
         // Winner
@@ -1546,6 +1583,66 @@
                 '<span class="player-name">' + r.match + '</span>' +
                 '<div class="prediction-detail">' + r.stage + ' &bull; Winner: <strong>' + r.winner + '</strong></div>' +
                 '</div></div>';
+        }).join('');
+    }
+
+    // ========== PREDICTION PERCENTAGES ==========
+    function renderPredictionPercentages() {
+        var container = document.getElementById('prediction-percentages');
+        if (!gameData.predictions || Object.keys(gameData.predictions).length === 0) {
+            container.innerHTML = '<div class="empty-state"><div class="emoji">🎯</div><p>No predictions yet. Join and start predicting!</p></div>';
+            return;
+        }
+
+        // Group predictions by match
+        var matchPredictions = {};
+        Object.keys(gameData.predictions).forEach(function(k) {
+            var pred = gameData.predictions[k];
+            if (!pred) return;
+            var key = pred.stage + '|' + pred.match;
+            if (!matchPredictions[key]) {
+                matchPredictions[key] = { stage: pred.stage, match: pred.match, votes: {} };
+            }
+            var team = pred.team;
+            matchPredictions[key].votes[team] = (matchPredictions[key].votes[team] || 0) + 1;
+        });
+
+        // Sort by stage order (most recent first)
+        var matchKeys = Object.keys(matchPredictions);
+        matchKeys.sort(function(a, b) {
+            var stageA = STAGES.indexOf(matchPredictions[a].stage);
+            var stageB = STAGES.indexOf(matchPredictions[b].stage);
+            return stageB - stageA;
+        });
+
+        // Show the most recent matches with predictions (limit to 10)
+        var display = matchKeys.slice(0, 10);
+
+        container.innerHTML = display.map(function(key) {
+            var mp = matchPredictions[key];
+            var totalVotes = 0;
+            Object.keys(mp.votes).forEach(function(t) { totalVotes += mp.votes[t]; });
+
+            // Sort teams by vote count
+            var teams = Object.keys(mp.votes).sort(function(a, b) { return mp.votes[b] - mp.votes[a]; });
+
+            var colors = ['pct-fill-a', 'pct-fill-b', 'pct-fill-draw'];
+
+            var bars = teams.map(function(team, idx) {
+                var count = mp.votes[team];
+                var pct = totalVotes > 0 ? Math.round(count / totalVotes * 100) : 0;
+                var colorClass = idx < 2 ? colors[idx] : colors[2];
+                return '<div class="pct-bar-row">' +
+                    '<span class="pct-label">' + team + '</span>' +
+                    '<div class="pct-bar"><div class="pct-fill ' + colorClass + '" style="width:' + Math.max(pct, 8) + '%;">' + pct + '%</div></div>' +
+                    '</div>';
+            }).join('');
+
+            return '<div class="pct-match">' +
+                '<div class="pct-match-title">' + mp.match + '</div>' +
+                bars +
+                '<div style="font-size:0.7rem;color:#999;margin-top:4px;">' + totalVotes + ' prediction' + (totalVotes !== 1 ? 's' : '') + '</div>' +
+                '</div>';
         }).join('');
     }
 
