@@ -233,7 +233,7 @@
             </div>
             <div class="card">
                 <h2>� Prediction Stats</h2>
-                <p style="color: #ccc; margin-bottom: 10px; font-size: 0.85rem;">How the group is predicting each match</p>
+                <p style="color: #ccc; margin-bottom: 10px; font-size: 0.85rem;">How the group is predicting today's matches</p>
                 <div id="prediction-percentages"></div>
             </div>
             <div class="card" id="admin-recent-predictions" style="display:none;">
@@ -256,30 +256,40 @@
                     <span class="stage-icon">🥉</span> Third Place = 30 pts &nbsp;|&nbsp;
                     <span class="stage-icon">🏆</span> Final = 35 pts
                 </div>
-                <div class="form-row">
-                    <div>
-                        <label for="pred-player-new">New Player? Join the Game</label>
-                        <div style="display:flex; gap:8px; margin-bottom:15px;">
-                            <input type="text" id="pred-player-new" placeholder="Type your name to join" style="margin-bottom:0; flex:1;">
-                            <button class="btn-secondary" id="pred-player-join-btn" style="padding:8px 14px; font-size:0.85rem; white-space:nowrap;">Join Game</button>
+                <div style="display:flex; gap:10px; margin-bottom:15px; flex-wrap:wrap;">
+                    <div style="flex:1; min-width:200px;">
+                        <label style="font-size:0.8rem;">New? Join the Game</label>
+                        <div style="display:flex; gap:6px;">
+                            <input type="text" id="pred-player-new" placeholder="Your name" style="margin-bottom:0; flex:1; padding:8px 10px; font-size:0.85rem;">
+                            <button class="btn-secondary" id="pred-player-join-btn" style="padding:6px 12px; font-size:0.8rem; white-space:nowrap;">Join</button>
                         </div>
-                        <label for="pred-player">Returning Player? Find Your Name</label>
-                        <input type="text" id="pred-player-search" placeholder="Type first 3 letters to search..." style="margin-bottom:8px;">
-                        <select id="pred-player"><option value="">Select your name...</option></select>
                     </div>
-                    <div>
-                        <label for="pred-stage">Match Date</label>
-                        <select id="pred-stage"><option value="">Select date...</option></select>
+                    <div style="flex:1; min-width:200px;">
+                        <label style="font-size:0.8rem;">Returning? Type to find your name</label>
+                        <input type="text" id="pred-player-search" list="player-datalist" placeholder="Start typing..." style="margin-bottom:0; padding:8px 10px; font-size:0.85rem;">
+                        <datalist id="player-datalist"></datalist>
+                        <input type="hidden" id="pred-player" value="">
                     </div>
                 </div>
                 <div class="form-row">
                     <div>
+                        <label for="pred-stage">Match Date</label>
+                        <select id="pred-stage"><option value="">Select date...</option></select>
+                    </div>
+                    <div>
                         <label for="pred-match-select">Match</label>
                         <select id="pred-match-select"><option value="">Select date first...</option></select>
                     </div>
+                </div>
+                <div class="form-row">
                     <div>
                         <label for="pred-team">Predicted Winner</label>
                         <select id="pred-team"><option value="">Select match first...</option></select>
+                    </div>
+                    <div>
+                        <label for="pred-score">Predicted Score (optional)</label>
+                        <input type="text" id="pred-score" placeholder="e.g., 2-1" style="text-align:center;">
+                        <p style="color:#999; font-size:0.7rem; margin-top:-10px;">+1 bonus for exact score</p>
                     </div>
                 </div>
                 <button class="btn-primary" id="submit-prediction-btn">Submit Prediction</button>
@@ -314,6 +324,8 @@
                     </div>
                     <label for="res-winner">Winning Team</label>
                     <input type="text" id="res-winner" placeholder="e.g., Brazil">
+                    <label for="res-score">Final Score</label>
+                    <input type="text" id="res-score" placeholder="e.g., 2-1" style="text-align:center;">
                     <button class="btn-success" id="record-result-btn">Record Result & Score</button>
                 </div>
                 <p id="manual-result-locked" style="color: #fc8181; font-size: 0.85rem;">🔒 Unlock admin in the Manage tab to enter results manually.</p>
@@ -837,32 +849,40 @@
         if (e.key === 'Enter') joinGame();
     });
 
-    // Filter dropdown as user types in search field
+    // Filter datalist as user types (show names starting with typed letters)
     document.getElementById('pred-player-search').addEventListener('input', function() {
         var search = this.value.trim().toLowerCase();
-        var sel = document.getElementById('pred-player');
+        var datalist = document.getElementById('player-datalist');
         var players = gameData.players || [];
+        var hiddenInput = document.getElementById('pred-player');
 
         if (search.length === 0) {
-            sel.innerHTML = '<option value="">Select your name...</option>' +
-                players.map(function(p) { return '<option value="' + p + '">' + p + '</option>'; }).join('');
+            datalist.innerHTML = '';
+            hiddenInput.value = '';
             return;
         }
 
-        // Filter to matching players
+        // Filter to names starting with the typed letters (from first character)
         var matches = players.filter(function(p) {
             return p.toLowerCase().indexOf(search) === 0;
         });
 
-        if (matches.length === 1) {
-            sel.innerHTML = '<option value="' + matches[0] + '">' + matches[0] + '</option>';
-            sel.value = matches[0];
-        } else if (matches.length > 0) {
-            sel.innerHTML = '<option value="">' + matches.length + ' matches...</option>' +
-                matches.map(function(p) { return '<option value="' + p + '">' + p + '</option>'; }).join('');
-        } else {
-            sel.innerHTML = '<option value="">No match found</option>';
-        }
+        datalist.innerHTML = matches.map(function(p) {
+            return '<option value="' + p + '">';
+        }).join('');
+
+        // If exact match found, set hidden value
+        var exact = players.find(function(p) { return p.toLowerCase() === search; });
+        hiddenInput.value = exact || '';
+    });
+
+    // When they select from datalist (value changes to full name)
+    document.getElementById('pred-player-search').addEventListener('change', function() {
+        var val = this.value.trim();
+        var players = gameData.players || [];
+        var found = players.find(function(p) { return p.toLowerCase() === val.toLowerCase(); });
+        document.getElementById('pred-player').value = found || '';
+        if (found) showToast('Selected: ' + found);
     });
 
     function joinGame() {
@@ -990,17 +1010,16 @@
     }
 
     document.getElementById('submit-prediction-btn').addEventListener('click', function() {
-        // Check dropdown first, then fall back to text field for name matching
+        // Get player from hidden input or search field
         var player = document.getElementById('pred-player').value;
         if (!player) {
-            // Try to match typed name to an existing player
-            var typed = document.getElementById('pred-player-new').value.trim();
+            var typed = document.getElementById('pred-player-search').value.trim();
             if (typed && gameData.players) {
                 var found = gameData.players.find(function(p) { return p.toLowerCase() === typed.toLowerCase(); });
                 if (found) player = found;
             }
         }
-        if (!player) return showToast('Please select your name or type it and click "Join Game" first');
+        if (!player) return showToast('Please find your name or join the game first');
         var stage = document.getElementById('pred-stage').value;
         var match = document.getElementById('pred-match-select').value;
         var team = document.getElementById('pred-team').value;
@@ -1026,18 +1045,24 @@
         // Create unique key for this prediction (player + stage + match)
         var predKey = btoa(unescape(encodeURIComponent(player + '|' + stage + '|' + match))).replace(/[.#$/\[\]]/g, '_');
 
+        var scoreInput = document.getElementById('pred-score').value.trim();
+        var predictedScore = scoreInput || null;
+
         persistData('predictions/' + predKey, {
             player: player,
             stage: stage,
             match: match,
             team: team,
+            predictedScore: predictedScore,
             scored: false,
             correct: false,
+            scoreCorrect: false,
             timestamp: Date.now()
         });
 
         document.getElementById('pred-team').innerHTML = '<option value="">Select match first...</option>';
-        showToast('Prediction submitted!');
+        document.getElementById('pred-score').value = '';
+        showToast('Prediction submitted!' + (predictedScore ? ' (Score: ' + predictedScore + ')' : ''));
     });
 
     // ========== RESULTS (MANUAL) ==========
@@ -1049,22 +1074,27 @@
 
         if (!stage || !match || !winner) return showToast('Please fill in all fields');
 
-        recordResultAndScore(stage, match, winner);
+        var actualScore = document.getElementById('res-score').value.trim() || null;
+
+        recordResultAndScore(stage, match, winner, actualScore);
         document.getElementById('res-winner').value = '';
+        document.getElementById('res-score').value = '';
     });
 
-    function recordResultAndScore(stage, match, winner) {
+    function recordResultAndScore(stage, match, winner, actualScore) {
         var resultKey = btoa(unescape(encodeURIComponent(stage + '|' + match))).replace(/[.#$/\[\]]/g, '_');
 
         persistData('results/' + resultKey, {
             stage: stage,
             match: match,
             winner: winner,
+            score: actualScore || null,
             timestamp: Date.now()
         });
 
         // Score all predictions for this match
         var scored = 0;
+        var scoreBonus = 0;
         if (gameData.predictions) {
             var updates = {};
             Object.keys(gameData.predictions).forEach(function(key) {
@@ -1077,13 +1107,22 @@
                     } else {
                         updates['predictions/' + key + '/correct'] = false;
                     }
+                    // Check score prediction bonus
+                    if (actualScore && pred.predictedScore && pred.predictedScore === actualScore) {
+                        updates['predictions/' + key + '/scoreCorrect'] = true;
+                        scoreBonus++;
+                    } else {
+                        updates['predictions/' + key + '/scoreCorrect'] = false;
+                    }
                 }
             });
             if (Object.keys(updates).length > 0) {
                 persistUpdate(updates);
             }
         }
-        showToast('Result recorded! ' + scored + ' correct prediction(s).');
+        var msg = 'Result recorded! ' + scored + ' correct prediction(s).';
+        if (scoreBonus > 0) msg += ' ' + scoreBonus + ' exact score bonus(es)!';
+        showToast(msg);
     }
 
     // ========== FETCH RESULTS FROM API ==========
@@ -1186,7 +1225,8 @@
                 }
 
                 if (matchedStage && matchedFixture && winner !== 'Draw') {
-                    recordResultAndScore(matchedStage, matchedFixture, winner);
+                    var actualScore = homeGoals + '-' + awayGoals;
+                    recordResultAndScore(matchedStage, matchedFixture, winner, actualScore);
                     newResults++;
                 }
             });
@@ -1380,6 +1420,10 @@
                     var multiplier = getStageMultiplier(pred.stage);
                     scores[pred.player] = (scores[pred.player] || 0) + multiplier;
                 }
+                // +1 bonus for exact score prediction
+                if (pred && pred.scoreCorrect) {
+                    scores[pred.player] = (scores[pred.player] || 0) + 1;
+                }
             });
         }
         return Object.keys(scores)
@@ -1445,13 +1489,7 @@
     }
 
     function renderPlayerDropdown() {
-        var sel = document.getElementById('pred-player');
-        var currentVal = sel.value;
-        sel.innerHTML = '<option value="">Select your name...</option>' +
-            (gameData.players || []).map(function(p) {
-                return '<option value="' + p + '">' + p + '</option>';
-            }).join('');
-        if (currentVal) sel.value = currentVal;
+        // No-op — datalist is populated dynamically on input
     }
 
     function renderStageDropdowns() {
@@ -1632,11 +1670,22 @@
             return;
         }
 
-        // Group predictions by match
+        // Determine today's stage key
+        var today = new Date();
+        var days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+        var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        var todayStr = days[today.getDay()] + ' ' + months[today.getMonth()] + ' ' + today.getDate();
+
+        // Find today's stage(s) from the STAGES list
+        var todayStages = STAGES.filter(function(s) { return s.indexOf(todayStr) >= 0; });
+
+        // Group predictions by match — only for today's matches
         var matchPredictions = {};
         Object.keys(gameData.predictions).forEach(function(k) {
             var pred = gameData.predictions[k];
             if (!pred) return;
+            // Only include predictions for today's matches
+            if (todayStages.length > 0 && todayStages.indexOf(pred.stage) === -1) return;
             var key = pred.stage + '|' + pred.match;
             if (!matchPredictions[key]) {
                 matchPredictions[key] = { stage: pred.stage, match: pred.match, votes: {} };
@@ -1645,18 +1694,15 @@
             matchPredictions[key].votes[team] = (matchPredictions[key].votes[team] || 0) + 1;
         });
 
-        // Sort by stage order (most recent first)
         var matchKeys = Object.keys(matchPredictions);
-        matchKeys.sort(function(a, b) {
-            var stageA = STAGES.indexOf(matchPredictions[a].stage);
-            var stageB = STAGES.indexOf(matchPredictions[b].stage);
-            return stageB - stageA;
-        });
 
-        // Show the most recent matches with predictions (limit to 10)
-        var display = matchKeys.slice(0, 10);
+        if (matchKeys.length === 0) {
+            // No predictions for today — show next upcoming
+            container.innerHTML = '<div class="empty-state"><p style="color:#ccc;">No predictions for today\'s matches yet.</p></div>';
+            return;
+        }
 
-        container.innerHTML = display.map(function(key) {
+        container.innerHTML = matchKeys.map(function(key) {
             var mp = matchPredictions[key];
             var totalVotes = 0;
             Object.keys(mp.votes).forEach(function(t) { totalVotes += mp.votes[t]; });
