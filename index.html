@@ -258,12 +258,14 @@
                 </div>
                 <div class="form-row">
                     <div>
-                        <label for="pred-player">Your Name</label>
-                        <select id="pred-player"><option value="">Select your name...</option></select>
-                        <div style="display:flex; gap:8px; margin-top:-10px; margin-bottom:15px;">
-                            <input type="text" id="pred-player-new" placeholder="Or type your name to join" style="margin-bottom:0; flex:1; font-size:0.85rem; padding:8px 12px;">
-                            <button class="btn-secondary" id="pred-player-join-btn" style="padding:8px 14px; font-size:0.8rem; white-space:nowrap;">Join Game</button>
+                        <label for="pred-player-new">New Player? Join the Game</label>
+                        <div style="display:flex; gap:8px; margin-bottom:15px;">
+                            <input type="text" id="pred-player-new" placeholder="Type your name to join" style="margin-bottom:0; flex:1;">
+                            <button class="btn-secondary" id="pred-player-join-btn" style="padding:8px 14px; font-size:0.85rem; white-space:nowrap;">Join Game</button>
                         </div>
+                        <label for="pred-player">Returning Player? Find Your Name</label>
+                        <input type="text" id="pred-player-search" placeholder="Type first 3 letters to search..." style="margin-bottom:8px;">
+                        <select id="pred-player"><option value="">Select your name...</option></select>
                     </div>
                     <div>
                         <label for="pred-stage">Match Date</label>
@@ -835,6 +837,34 @@
         if (e.key === 'Enter') joinGame();
     });
 
+    // Filter dropdown as user types in search field
+    document.getElementById('pred-player-search').addEventListener('input', function() {
+        var search = this.value.trim().toLowerCase();
+        var sel = document.getElementById('pred-player');
+        var players = gameData.players || [];
+
+        if (search.length === 0) {
+            sel.innerHTML = '<option value="">Select your name...</option>' +
+                players.map(function(p) { return '<option value="' + p + '">' + p + '</option>'; }).join('');
+            return;
+        }
+
+        // Filter to matching players
+        var matches = players.filter(function(p) {
+            return p.toLowerCase().indexOf(search) === 0;
+        });
+
+        if (matches.length === 1) {
+            sel.innerHTML = '<option value="' + matches[0] + '">' + matches[0] + '</option>';
+            sel.value = matches[0];
+        } else if (matches.length > 0) {
+            sel.innerHTML = '<option value="">' + matches.length + ' matches...</option>' +
+                matches.map(function(p) { return '<option value="' + p + '">' + p + '</option>'; }).join('');
+        } else {
+            sel.innerHTML = '<option value="">No match found</option>';
+        }
+    });
+
     function joinGame() {
         var input = document.getElementById('pred-player-new');
         var name = input.value.trim();
@@ -960,12 +990,22 @@
     }
 
     document.getElementById('submit-prediction-btn').addEventListener('click', function() {
+        // Check dropdown first, then fall back to text field for name matching
         var player = document.getElementById('pred-player').value;
+        if (!player) {
+            // Try to match typed name to an existing player
+            var typed = document.getElementById('pred-player-new').value.trim();
+            if (typed && gameData.players) {
+                var found = gameData.players.find(function(p) { return p.toLowerCase() === typed.toLowerCase(); });
+                if (found) player = found;
+            }
+        }
+        if (!player) return showToast('Please select your name or type it and click "Join Game" first');
         var stage = document.getElementById('pred-stage').value;
         var match = document.getElementById('pred-match-select').value;
         var team = document.getElementById('pred-team').value;
 
-        if (!player || !stage || !match || !team) return showToast('Please fill in all fields');
+        if (!stage || !match || !team) return showToast('Please fill in all fields');
 
         // Check if game has ended (winner declared)
         if (gameData.winner) return showToast('The game is over! No more predictions allowed.');
