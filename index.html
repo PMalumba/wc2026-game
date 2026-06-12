@@ -443,12 +443,12 @@
             projectId: "wc2026-predictions-f2b0c"
         },
         // Free tier: 100 requests/day from https://www.api-football.com/
-        // World Cup 2026 league ID = 1 (FIFA World Cup), season = 2026
+        // apifootball.com free tier (500 requests/day)
+        // World Cup 2026 league_id: check your apifootball.com dashboard for the correct ID
         footballApi: {
             key: "da0e18eda4eaf2f526d49409098a9406f7f1780d35b5afc3525145280f603c57",
-            baseUrl: "https://v3.football.api-sports.io",
-            leagueId: 1,
-            season: 2026
+            baseUrl: "https://apiv3.apifootball.com",
+            leagueId: 28
         }
     };
     // ==========================================================
@@ -1052,7 +1052,7 @@
     async function fetchLiveResults() {
         if (!isAdminUnlocked) return showToast('Admin access required — unlock in Manage tab');
         var statusEl = document.getElementById('fetch-status');
-        statusEl.textContent = '⏳ Fetching results and upcoming fixtures...';
+        statusEl.textContent = '⏳ Fetching results...';
 
         if (CONFIG.footballApi.key === 'YOUR_API_FOOTBALL_KEY') {
             statusEl.textContent = '⚠️ Please configure your API key in the CONFIG section of index.html';
@@ -1061,29 +1061,79 @@
 
         try {
             var newResults = 0;
-            var fixturesUpdated = 0;
 
-            // 1. Fetch FINISHED matches and score predictions
-            var response = await fetch(CONFIG.footballApi.baseUrl + '/fixtures?league=' + CONFIG.footballApi.leagueId + '&season=' + CONFIG.footballApi.season + '&status=FT-AET-PEN', {
-                headers: { 'x-apisports-key': CONFIG.footballApi.key }
-            });
+            // Get today and yesterday's date for fetching recent results
+            var today = new Date();
+            var weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+            var fromDate = weekAgo.toISOString().split('T')[0];
+            var toDate = today.toISOString().split('T')[0];
+
+            // Fetch matches from apifootball.com (World Cup league_id = 28)
+            var url = CONFIG.footballApi.baseUrl + '?action=get_events&league_id=' + CONFIG.footballApi.leagueId + '&from=' + fromDate + '&to=' + toDate + '&APIkey=' + CONFIG.footballApi.key;
+
+            var response = await fetch(url);
             var data = await response.json();
 
-            if (data.response && data.response.length > 0) {
-                data.response.forEach(function(fixture) {
-                    var homeTeam = fixture.teams.home.name;
-                    var awayTeam = fixture.teams.away.name;
-                    var winner = fixture.teams.home.winner ? homeTeam : (fixture.teams.away.winner ? awayTeam : null);
-                    if (!winner) return; // Skip draws (penalties decide winner in knockouts)
+            // Check for errors
+            if (data.error) {
+                statusEl.textContent = '❌ API Error: ' + (data.message || data.error);
+                return;
+            }
 
-                    // Find matching preloaded fixture (check both hardcoded and overrides)
-                    var matchedStage = null;
-                    var matchedFixture = null;
+            if (!Array.isArray(data) || data.length === 0) {
+                statusEl.textContent = '⚠️ No finished matches found in the last 7 days. API connection OK.';
+                return;
+            }
+
+            data.forEach(function(match) {
+                // Only process finished matches
+                if (match.match_status !== 'Finished' && match.match_status !== 'After Pens' && match.match_status !== 'After ET') return;
+
+                var homeTeam = match.match_hometeam_name;
+                var awayTeam = match.match_awayteam_name;
+                var homeGoals = parseInt(match.match_hometeam_score) || 0;
+                var awayGoals = parseInt(match.match_awayteam_score) || 0;
+
+                // Determine winner (for knockouts, check penalty score)
+                var winner;
+                if (match.match_hometeam_penalty_score && match.match_awayteam_penalty_score) {
+                    var homePen = parseInt(match.match_hometeam_penalty_score) || 0;
+                    var awayPen = parseInt(match.match_awayteam_penalty_score) || 0;
+                    winner = homePen > awayPen ? homeTeam : awayTeam;
+                } else if (homeGoals > awayGoals) {
+                    winner = homeTeam;
+                } else if (awayGoals > homeGoals) {
+                    winner = awayTeam;
+                } else {
+                    winner = 'Draw';
+                }
+
+                // Find matching fixture in our preloaded data
+                var matchedStage = null;
+                var matchedFixture = null;
+
+                Object.keys(PRELOADED_MATCHES).forEach(function(stage) {
+                    var matches = getEffectiveMatches(stage);
+                    matches.forEach(function(m) {
+                        var fixtureLower = m.match.toLowerCase();
+                        if (fixtureLower.indexOf(homeTeam.toLowerCase()) >= 0 &&
+                            fixtureLower.indexOf(awayTeam.toLowerCase()) >= 0) {
+                            var rKey = btoa(unescape(encodeURIComponent(stage + '|' + m.match))).replace(/[.#$/\[\]]/g, '_');
+                            if (!gameData.results || !gameData.results[rKey]) {
+                                matchedStage = stage;
+                                matchedFixture = m.match;
+                            }
+                        }
+                    });
+                });
+
+                // Fallback: match by either team name
+                if (!matchedStage) {
                     Object.keys(PRELOADED_MATCHES).forEach(function(stage) {
                         var matches = getEffectiveMatches(stage);
                         matches.forEach(function(m) {
                             var fixtureLower = m.match.toLowerCase();
-                            if (fixtureLower.indexOf(homeTeam.toLowerCase()) >= 0 &&
+                            if (fixtureLower.indexOf(homeTeam.toLowerCase()) >= 0 ||
                                 fixtureLower.indexOf(awayTeam.toLowerCase()) >= 0) {
                                 var rKey = btoa(unescape(encodeURIComponent(stage + '|' + m.match))).replace(/[.#$/\[\]]/g, '_');
                                 if (!gameData.results || !gameData.results[rKey]) {
@@ -1093,94 +1143,15 @@
                             }
                         });
                     });
+                }
 
-                    // Fallback: match by either team name appearing
-                    if (!matchedStage) {
-                        Object.keys(PRELOADED_MATCHES).forEach(function(stage) {
-                            var matches = getEffectiveMatches(stage);
-                            matches.forEach(function(m) {
-                                var fixtureLower = m.match.toLowerCase();
-                                if (fixtureLower.indexOf(homeTeam.toLowerCase()) >= 0 ||
-                                    fixtureLower.indexOf(awayTeam.toLowerCase()) >= 0) {
-                                    var rKey = btoa(unescape(encodeURIComponent(stage + '|' + m.match))).replace(/[.#$/\[\]]/g, '_');
-                                    if (!gameData.results || !gameData.results[rKey]) {
-                                        matchedStage = stage;
-                                        matchedFixture = m.match;
-                                    }
-                                }
-                            });
-                        });
-                    }
-
-                    if (matchedStage && matchedFixture) {
-                        recordResultAndScore(matchedStage, matchedFixture, winner);
-                        newResults++;
-                    }
-                });
-            }
-
-            // 2. Fetch UPCOMING/SCHEDULED fixtures to populate knockout round team names
-            var upcomingResp = await fetch(CONFIG.footballApi.baseUrl + '/fixtures?league=' + CONFIG.footballApi.leagueId + '&season=' + CONFIG.footballApi.season + '&status=NS-TBD', {
-                headers: { 'x-apisports-key': CONFIG.footballApi.key }
+                if (matchedStage && matchedFixture && winner !== 'Draw') {
+                    recordResultAndScore(matchedStage, matchedFixture, winner);
+                    newResults++;
+                }
             });
-            var upcomingData = await upcomingResp.json();
 
-            if (upcomingData.response && upcomingData.response.length > 0) {
-                upcomingData.response.forEach(function(fixture) {
-                    var homeTeam = fixture.teams.home.name;
-                    var awayTeam = fixture.teams.away.name;
-                    var matchDate = new Date(fixture.fixture.date);
-                    var round = (fixture.league.round || '').toLowerCase();
-
-                    // Only update knockout fixtures (these start as placeholders like "M73: 2nd Group A vs 2nd Group B")
-                    if (homeTeam === 'TBD' || awayTeam === 'TBD') return;
-
-                    // Determine which stage this belongs to based on date
-                    var stage = getStageFromDate(matchDate, round);
-                    if (!stage) return;
-
-                    // Check if this fixture matches a placeholder in our preloaded data
-                    var preloaded = PRELOADED_MATCHES[stage];
-                    if (!preloaded) return;
-
-                    var realMatchName = homeTeam + ' vs ' + awayTeam;
-
-                    // Find the placeholder fixture at the same index (by match number or position)
-                    for (var idx = 0; idx < preloaded.length; idx++) {
-                        var currentName = preloaded[idx].match;
-                        // Check if override already exists with real team names
-                        var overrideName = (fixtureOverrides[stage] && fixtureOverrides[stage][idx] && fixtureOverrides[stage][idx].match) || currentName;
-
-                        // Only update if current name is still a placeholder (contains "Group" or "Winner" or "Best 3rd")
-                        if (overrideName.indexOf('Group') >= 0 || overrideName.indexOf('Winner') >= 0 || overrideName.indexOf('Best 3rd') >= 0 || overrideName.indexOf('QF') >= 0 || overrideName.indexOf('SF') >= 0) {
-                            // Match by venue or match number pattern
-                            var venue = preloaded[idx].venue;
-                            var fixtureVenue = fixture.fixture.venue ? fixture.fixture.venue.name : '';
-
-                            // Try to match by venue name similarity
-                            if (fixtureVenue && venue && fixtureVenue.toLowerCase().indexOf(venue.split(',')[0].toLowerCase().trim()) >= 0) {
-                                var fData = { match: realMatchName, venue: preloaded[idx].venue };
-                                if (firebaseReady) {
-                                    db.ref('fixtures/' + stage + '/' + idx).set(fData);
-                                } else {
-                                    if (!fixtureOverrides[stage]) fixtureOverrides[stage] = {};
-                                    fixtureOverrides[stage][idx] = fData;
-                                }
-                                fixturesUpdated++;
-                                break;
-                            }
-                        }
-                    }
-                });
-            }
-
-            // Save fixture overrides locally if not using Firebase
-            if (!firebaseReady && fixturesUpdated > 0) {
-                localStorage.setItem('wc2026_fixtures', JSON.stringify(fixtureOverrides));
-                renderAll();
-            }
-
-            statusEl.textContent = '✅ Done! ' + newResults + ' result(s) scored, ' + fixturesUpdated + ' fixture name(s) updated.';
+            statusEl.textContent = '✅ Done! ' + newResults + ' new result(s) scored from ' + data.length + ' matches found.';
         } catch (err) {
             statusEl.textContent = '❌ Error: ' + err.message;
         }
@@ -1401,7 +1372,7 @@
         }
 
         renderDashboard();
-        renderLeaderboard('dashboard-leaderboard', 5);
+        renderLeaderboard('dashboard-leaderboard', 10);
         renderLeaderboard('full-leaderboard', null);
         renderPlayerBreakdown();
         renderResults();
