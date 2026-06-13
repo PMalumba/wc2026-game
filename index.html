@@ -805,20 +805,18 @@
     }
 
     function persistUpdate(updates) {
-        // Always apply updates to local gameData so in-memory state stays in sync
-        Object.keys(updates).forEach(function(path) {
-            var parts = path.split('/');
-            var obj = gameData;
-            for (var i = 0; i < parts.length - 1; i++) {
-                if (!obj[parts[i]]) obj[parts[i]] = {};
-                obj = obj[parts[i]];
-            }
-            obj[parts[parts.length - 1]] = updates[path];
-        });
-
         if (firebaseReady) {
             gameRef.update(updates);
         } else {
+            Object.keys(updates).forEach(function(path) {
+                var parts = path.split('/');
+                var obj = gameData;
+                for (var i = 0; i < parts.length - 1; i++) {
+                    if (!obj[parts[i]]) obj[parts[i]] = {};
+                    obj = obj[parts[i]];
+                }
+                obj[parts[parts.length - 1]] = updates[path];
+            });
             saveLocalData();
             renderAll();
         }
@@ -1170,10 +1168,21 @@
                 // Only process finished matches
                 if (match.match_status !== 'Finished' && match.match_status !== 'After Pens' && match.match_status !== 'After ET') return;
 
+                // Skip if match hasn't actually been played (score is empty or both 0 with no real data)
+                if (match.match_hometeam_score === '' || match.match_awayteam_score === '') return;
+                if (match.match_hometeam_score === null || match.match_awayteam_score === null) return;
+
+                // Skip if match date is in the future
+                var matchDateTime = new Date(match.match_date + 'T' + (match.match_time || '00:00') + ':00');
+                if (matchDateTime > new Date()) return;
+
                 var homeTeam = match.match_hometeam_name;
                 var awayTeam = match.match_awayteam_name;
-                var homeGoals = parseInt(match.match_hometeam_score) || 0;
-                var awayGoals = parseInt(match.match_awayteam_score) || 0;
+                var homeGoals = parseInt(match.match_hometeam_score);
+                var awayGoals = parseInt(match.match_awayteam_score);
+
+                // Skip if scores aren't valid numbers
+                if (isNaN(homeGoals) || isNaN(awayGoals)) return;
 
                 // Determine winner (for knockouts, check penalty score)
                 var winner;
