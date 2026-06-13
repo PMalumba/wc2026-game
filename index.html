@@ -187,6 +187,14 @@
             border-radius: 20px; font-size: 0.75rem; color: #fff;
         }
         .stage-icon { font-size: 1.2rem; }
+        #player-autocomplete li {
+            padding: 9px 14px; cursor: pointer; color: #fff; font-size: 0.9rem;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        #player-autocomplete li:last-child { border-bottom: none; }
+        #player-autocomplete li:hover, #player-autocomplete li.ac-active {
+            background: rgba(255,184,28,0.2); color: #FFB81C;
+        }
     </style>
 </head>
 <body>
@@ -264,10 +272,10 @@
                             <button class="btn-secondary" id="pred-player-join-btn" style="padding:6px 12px; font-size:0.8rem; white-space:nowrap;">Join</button>
                         </div>
                     </div>
-                    <div style="flex:1; min-width:200px;">
+                    <div style="flex:1; min-width:200px; position:relative;">
                         <label style="font-size:0.8rem;">Returning? Type to find your name</label>
-                        <input type="text" id="pred-player-search" list="player-datalist" placeholder="Start typing..." style="margin-bottom:0; padding:8px 10px; font-size:0.85rem;">
-                        <datalist id="player-datalist"></datalist>
+                        <input type="text" id="pred-player-search" placeholder="Start typing..." autocomplete="off" style="margin-bottom:0; padding:8px 10px; font-size:0.85rem;">
+                        <ul id="player-autocomplete" style="display:none; position:absolute; z-index:999; left:0; right:0; top:100%; margin:0; padding:0; list-style:none; background:#1a1a1a; border:1px solid rgba(255,184,28,0.4); border-radius:0 0 8px 8px; max-height:180px; overflow-y:auto;"></ul>
                         <input type="hidden" id="pred-player" value="">
                     </div>
                 </div>
@@ -805,18 +813,20 @@
     }
 
     function persistUpdate(updates) {
+        // Always apply updates to local gameData so in-memory state stays in sync
+        Object.keys(updates).forEach(function(path) {
+            var parts = path.split('/');
+            var obj = gameData;
+            for (var i = 0; i < parts.length - 1; i++) {
+                if (!obj[parts[i]]) obj[parts[i]] = {};
+                obj = obj[parts[i]];
+            }
+            obj[parts[parts.length - 1]] = updates[path];
+        });
+
         if (firebaseReady) {
             gameRef.update(updates);
         } else {
-            Object.keys(updates).forEach(function(path) {
-                var parts = path.split('/');
-                var obj = gameData;
-                for (var i = 0; i < parts.length - 1; i++) {
-                    if (!obj[parts[i]]) obj[parts[i]] = {};
-                    obj = obj[parts[i]];
-                }
-                obj[parts[parts.length - 1]] = updates[path];
-            });
             saveLocalData();
             renderAll();
         }
@@ -849,41 +859,62 @@
         if (e.key === 'Enter') joinGame();
     });
 
-    // Filter datalist as user types (show names starting with typed letters)
-    document.getElementById('pred-player-search').addEventListener('input', function() {
-        var search = this.value.trim().toLowerCase();
-        var datalist = document.getElementById('player-datalist');
-        var players = gameData.players || [];
+    // ========== CUSTOM AUTOCOMPLETE FOR PLAYER SEARCH ==========
+    (function() {
+        var searchInput = document.getElementById('pred-player-search');
+        var dropdown = document.getElementById('player-autocomplete');
         var hiddenInput = document.getElementById('pred-player');
 
-        if (search.length === 0) {
-            datalist.innerHTML = '';
-            hiddenInput.value = '';
-            return;
+        function closeDropdown() {
+            dropdown.style.display = 'none';
+            dropdown.innerHTML = '';
         }
 
-        // Filter to names starting with the typed letters (from first character)
-        var matches = players.filter(function(p) {
-            return p.toLowerCase().indexOf(search) === 0;
+        function selectPlayer(name) {
+            searchInput.value = name;
+            hiddenInput.value = name;
+            closeDropdown();
+        }
+
+        searchInput.addEventListener('input', function() {
+            var search = this.value.trim().toLowerCase();
+            hiddenInput.value = '';
+            if (search.length === 0) { closeDropdown(); return; }
+
+            var players = gameData.players || [];
+            var matches = players.filter(function(p) {
+                return p.toLowerCase().indexOf(search) === 0;
+            });
+
+            if (matches.length === 0) { closeDropdown(); return; }
+
+            dropdown.innerHTML = matches.map(function(p) {
+                return '<li data-name="' + p + '">' + p + '</li>';
+            }).join('');
+            dropdown.style.display = 'block';
+
+            dropdown.querySelectorAll('li').forEach(function(li) {
+                li.addEventListener('mousedown', function(e) {
+                    e.preventDefault(); // prevent blur firing before click
+                    selectPlayer(this.getAttribute('data-name'));
+                });
+            });
         });
 
-        datalist.innerHTML = matches.map(function(p) {
-            return '<option value="' + p + '">';
-        }).join('');
+        // Close dropdown when focus leaves the input
+        searchInput.addEventListener('blur', function() {
+            // Small delay so mousedown on a list item fires first
+            setTimeout(closeDropdown, 150);
+        });
 
-        // If exact match found, set hidden value
-        var exact = players.find(function(p) { return p.toLowerCase() === search; });
-        hiddenInput.value = exact || '';
-    });
+        // Close dropdown when user switches tabs
+        document.querySelectorAll('.tab-btn').forEach(function(btn) {
+            btn.addEventListener('click', closeDropdown);
+        });
+    }());
 
-    // When they select from datalist (value changes to full name)
-    document.getElementById('pred-player-search').addEventListener('change', function() {
-        var val = this.value.trim();
-        var players = gameData.players || [];
-        var found = players.find(function(p) { return p.toLowerCase() === val.toLowerCase(); });
-        document.getElementById('pred-player').value = found || '';
-        if (found) showToast('Selected: ' + found);
-    });
+    // Filter datalist as user types — kept as no-op (replaced by custom autocomplete above)
+    function renderPlayerDropdownLegacy() {}
 
     function joinGame() {
         var input = document.getElementById('pred-player-new');
@@ -1168,21 +1199,22 @@
                 // Only process finished matches
                 if (match.match_status !== 'Finished' && match.match_status !== 'After Pens' && match.match_status !== 'After ET') return;
 
-                // Skip if match hasn't actually been played (score is empty or both 0 with no real data)
-                if (match.match_hometeam_score === '' || match.match_awayteam_score === '') return;
-                if (match.match_hometeam_score === null || match.match_awayteam_score === null) return;
-
-                // Skip if match date is in the future
-                var matchDateTime = new Date(match.match_date + 'T' + (match.match_time || '00:00') + ':00');
-                if (matchDateTime > new Date()) return;
+                // Skip matches whose date is in the future (API sometimes returns future fixtures with status "Finished")
+                if (match.match_date) {
+                    var matchDate = new Date(match.match_date);
+                    matchDate.setHours(23, 59, 59, 999); // allow up to end of match day
+                    if (matchDate > today) return;
+                }
 
                 var homeTeam = match.match_hometeam_name;
                 var awayTeam = match.match_awayteam_name;
-                var homeGoals = parseInt(match.match_hometeam_score);
-                var awayGoals = parseInt(match.match_awayteam_score);
+                var homeGoals = parseInt(match.match_hometeam_score) || 0;
+                var awayGoals = parseInt(match.match_awayteam_score) || 0;
 
-                // Skip if scores aren't valid numbers
-                if (isNaN(homeGoals) || isNaN(awayGoals)) return;
+                // Skip 0-0 results unless it's a penalty shootout or extra time result
+                // (future placeholder fixtures always show 0-0)
+                if (homeGoals === 0 && awayGoals === 0 &&
+                    match.match_status !== 'After Pens' && match.match_status !== 'After ET') return;
 
                 // Determine winner (for knockouts, check penalty score)
                 var winner;
