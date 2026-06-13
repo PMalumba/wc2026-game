@@ -805,18 +805,20 @@
     }
 
     function persistUpdate(updates) {
+        // Always apply updates to local gameData so in-memory state stays in sync
+        Object.keys(updates).forEach(function(path) {
+            var parts = path.split('/');
+            var obj = gameData;
+            for (var i = 0; i < parts.length - 1; i++) {
+                if (!obj[parts[i]]) obj[parts[i]] = {};
+                obj = obj[parts[i]];
+            }
+            obj[parts[parts.length - 1]] = updates[path];
+        });
+
         if (firebaseReady) {
             gameRef.update(updates);
         } else {
-            Object.keys(updates).forEach(function(path) {
-                var parts = path.split('/');
-                var obj = gameData;
-                for (var i = 0; i < parts.length - 1; i++) {
-                    if (!obj[parts[i]]) obj[parts[i]] = {};
-                    obj = obj[parts[i]];
-                }
-                obj[parts[parts.length - 1]] = updates[path];
-            });
             saveLocalData();
             renderAll();
         }
