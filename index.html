@@ -1075,7 +1075,7 @@
     // ========== RESULTS (MANUAL) ==========
     document.getElementById('record-result-btn').addEventListener('click', function() {
         if (!isAdminUnlocked) return showToast('Admin access required');
-        var stage = document.getElementById('res-stage').value;
+        var stage = document.getElementByIdI('res-stage').value;
         var match = document.getElementById('res-match-select').value;
         var winner = document.getElementById('res-winner').value.trim();
 
@@ -1179,28 +1179,35 @@
             console.log('API returned ' + data.length + ' matches. Statuses:', statusCounts);
 
             data.forEach(function(match) {
-                // STRICT: only process matches with a definitive finished status
-                var status = (match.match_status || '').toString().toLowerCase();
-                var isFinished = (status === 'finished' || status === 'after pens' || status === 'after et' || status === 'ft' || status === 'aet' || status === 'pen');
-                if (!isFinished) return;
+                // Get match status
+                var status = (match.match_status || '').toString().trim();
 
-                // Must have actual scores (not empty/null)
-                if (!match.match_hometeam_score || !match.match_awayteam_score) return;
-                if (match.match_hometeam_score === '?' || match.match_awayteam_score === '?') return;
-
-                // HARD DATE CHECK: skip any match dated after today
-                if (match.match_date) {
-                    var matchDate = new Date(match.match_date + 'T23:59:59');
-                    if (matchDate > new Date()) return;
+                // ONLY accept these exact statuses (case-insensitive check)
+                var statusLower = status.toLowerCase();
+                var isFinished = (statusLower === 'finished' || statusLower === 'ft' ||
+                    statusLower === 'after pens' || statusLower === 'after et' ||
+                    statusLower === 'aet' || statusLower === 'pen.');
+                
+                // Skip anything not explicitly finished
+                if (!isFinished) {
+                    console.log('SKIPPED: ' + match.match_hometeam_name + ' vs ' + match.match_awayteam_name + ' | status: "' + status + '" | date: ' + match.match_date);
+                    return;
                 }
+
+                // Must have real scores
+                var homeScore = match.match_hometeam_score;
+                var awayScore = match.match_awayteam_score;
+                if (!homeScore && homeScore !== '0') return;
+                if (!awayScore && awayScore !== '0') return;
+
+                var homeGoals = parseInt(homeScore);
+                var awayGoals = parseInt(awayScore);
+                if (isNaN(homeGoals) || isNaN(awayGoals)) return;
 
                 var homeTeam = match.match_hometeam_name;
                 var awayTeam = match.match_awayteam_name;
-                var homeGoals = parseInt(match.match_hometeam_score);
-                var awayGoals = parseInt(match.match_awayteam_score);
 
-                // Must be valid numbers
-                if (isNaN(homeGoals) || isNaN(awayGoals)) return;
+                console.log('ACCEPTED: ' + homeTeam + ' ' + homeGoals + '-' + awayGoals + ' ' + awayTeam + ' | status: "' + status + '"');
 
                 // Determine winner (for knockouts, check penalty score)
                 var winner;
@@ -1253,7 +1260,7 @@
                     });
                 }
 
-                if (matchedStage && matchedFixture && winner !== 'Draw') {
+                if (matchedStage && matchedFixture) {
                     var actualScore = homeGoals + '-' + awayGoals;
                     recordResultAndScore(matchedStage, matchedFixture, winner, actualScore);
                     newResults++;
