@@ -1188,6 +1188,12 @@
                 if (!match.match_hometeam_score || !match.match_awayteam_score) return;
                 if (match.match_hometeam_score === '?' || match.match_awayteam_score === '?') return;
 
+                // HARD DATE CHECK: skip any match dated after today
+                if (match.match_date) {
+                    var matchDate = new Date(match.match_date + 'T23:59:59');
+                    if (matchDate > new Date()) return;
+                }
+
                 var homeTeam = match.match_hometeam_name;
                 var awayTeam = match.match_awayteam_name;
                 var homeGoals = parseInt(match.match_hometeam_score);
