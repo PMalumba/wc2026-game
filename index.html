@@ -645,6 +645,14 @@ async function fetchResults(){
         console.log('Fetched',data.length,'matches from league',wcLeague);
         if(data.length>0)console.log('Sample:',JSON.stringify(data[0]).substring(0,500));
 
+        // Helper: extract date from stage string (e.g. "Group Stage - Fri Jun 26" -> Date)
+        var monthMap={Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};
+        function stageToDate(stage){
+            var parts=stage.match(/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d+)/);
+            if(!parts)return null;
+            return new Date(2026,monthMap[parts[1]],parseInt(parts[2]));
+        }
+
         var n=0;data.forEach(function(m){
             var st=(m.match_status||'').toLowerCase();
             if(st!=='finished'&&st!=='ft'&&st!=='after pens'&&st!=='after et'&&st!=='aet')return;
@@ -657,15 +665,27 @@ async function fetchResults(){
             if(m.match_hometeam_penalty_score&&m.match_awayteam_penalty_score){var hp=parseInt(m.match_hometeam_penalty_score),ap=parseInt(m.match_awayteam_penalty_score);winner=hp>ap?ht:at;}
             else if(hg>ag)winner=ht;else if(ag>hg)winner=at;else winner='Draw';
             var score=hg+'-'+ag;
+
+            // Get the API match date for validation
+            var apiMatchDate=m.match_date||''; // format: "2026-06-13"
+
             var ms=null,mf=null;
-            Object.keys(PRELOADED_MATCHES).forEach(function(stage){getEffectiveMatches(stage).forEach(function(x){
-                if(teamMatches(ht,x.match)&&teamMatches(at,x.match)){
-                    var rk=btoa(unescape(encodeURIComponent(stage+'|'+x.match))).replace(/[.#$/\[\]]/g,'_');
-                    if(!gameData.results||!gameData.results[rk]){ms=stage;mf=x.match;}
+            Object.keys(PRELOADED_MATCHES).forEach(function(stage){
+                // Validate: only match fixtures whose date matches the API match date
+                var fixtureDate=stageToDate(stage);
+                if(apiMatchDate&&fixtureDate){
+                    var apiD=new Date(apiMatchDate+'T12:00:00');
+                    if(fixtureDate.getFullYear()!==apiD.getFullYear()||fixtureDate.getMonth()!==apiD.getMonth()||fixtureDate.getDate()!==apiD.getDate())return;
                 }
-            });});
+                getEffectiveMatches(stage).forEach(function(x){
+                    if(teamMatches(ht,x.match)&&teamMatches(at,x.match)){
+                        var rk=btoa(unescape(encodeURIComponent(stage+'|'+x.match))).replace(/[.#$/\[\]]/g,'_');
+                        if(!gameData.results||!gameData.results[rk]){ms=stage;mf=x.match;}
+                    }
+                });
+            });
             if(ms&&mf){recordResult(ms,mf,winner,score);n++;console.log('✅ SCORED:',ht,hg+'-'+ag,at);}
-            else{console.log('⚠️ NO FIXTURE MATCH:',ht,'vs',at,'(may already be recorded)');}
+            else{console.log('⚠️ NO FIXTURE MATCH:',ht,'vs',at,'(may already be recorded or date mismatch)');}
         });
         el.textContent='✅ Done! '+n+' new result(s) scored.';
         renderAll();
