@@ -503,6 +503,30 @@ function persistUpdate(u) { if (firebaseReady) gameRef.update(u); else { Object.
 // ==================== HELPERS ====================
 var FLAGS={'mexico':'mx','south africa':'za','south korea':'kr','czech republic':'cz','canada':'ca','bosnia & herzegovina':'ba','usa':'us','paraguay':'py','qatar':'qa','switzerland':'ch','brazil':'br','morocco':'ma','haiti':'ht','scotland':'gb-sct','australia':'au','turkey':'tr','germany':'de','curacao':'cw','netherlands':'nl','japan':'jp','ivory coast':'ci','ecuador':'ec','sweden':'se','tunisia':'tn','spain':'es','cabo verde':'cv','belgium':'be','egypt':'eg','saudi arabia':'sa','uruguay':'uy','iran':'ir','new zealand':'nz','france':'fr','senegal':'sn','iraq':'iq','norway':'no','argentina':'ar','algeria':'dz','austria':'at','jordan':'jo','portugal':'pt','dr congo':'cd','england':'gb-eng','croatia':'hr','ghana':'gh','panama':'pa','uzbekistan':'uz','colombia':'co'};
 function getFlag(team){var code=FLAGS[team.toLowerCase().trim()];if(!code)return'';return'<img src="https://flagcdn.com/20x15/'+code+'.png" alt="'+team+'" style="vertical-align:middle;margin:0 2px;" width="20" height="15">';}
+// Kickoff times (SAST) for each match date — earliest kickoff on that day
+var KICKOFF_TIMES = {
+    'Group Stage - Thu Jun 11':'02:00','Group Stage - Fri Jun 12':'15:00','Group Stage - Sat Jun 13':'15:00',
+    'Group Stage - Sun Jun 14':'03:00','Group Stage - Mon Jun 15':'03:00','Group Stage - Tue Jun 16':'03:00',
+    'Group Stage - Wed Jun 17':'03:00','Group Stage - Thu Jun 18':'03:00','Group Stage - Fri Jun 19':'03:00',
+    'Group Stage - Sat Jun 20':'03:00','Group Stage - Sun Jun 21':'03:00','Group Stage - Mon Jun 22':'03:00',
+    'Group Stage - Tue Jun 23':'03:00','Group Stage - Wed Jun 24':'03:00','Group Stage - Thu Jun 25':'03:00',
+    'Group Stage - Fri Jun 26':'03:00','Group Stage - Sat Jun 27':'03:00','Group Stage - Sun Jun 28':'03:00',
+    'Round of 32 - Mon Jun 29':'03:00','Round of 32 - Tue Jun 30':'03:00','Round of 32 - Wed Jul 1':'03:00',
+    'Round of 32 - Thu Jul 2':'03:00','Round of 32 - Fri Jul 3':'03:00','Round of 32 - Sat Jul 4':'03:00',
+    'Round of 16 - Sat Jul 4':'03:00','Round of 16 - Sun Jul 5':'03:00','Round of 16 - Mon Jul 6':'03:00','Round of 16 - Tue Jul 7':'03:00',
+    'Quarter-Final - Thu Jul 9':'03:00','Quarter-Final - Fri Jul 10':'03:00','Quarter-Final - Sat Jul 11':'03:00','Quarter-Final - Sun Jul 12':'03:00',
+    'Semi-Final - Tue Jul 14':'03:00','Semi-Final - Wed Jul 15':'03:00',
+    'Third Place - Sat Jul 18':'03:00','Final - Sun Jul 19':'03:00'
+};
+function hasMatchStarted(stage){
+    var monthMap={Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};
+    var parts=stage.match(/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d+)/);
+    if(!parts)return false;
+    var time=KICKOFF_TIMES[stage]||'03:00';
+    var tp=time.split(':');
+    var kickoff=new Date(2026,monthMap[parts[1]],parseInt(parts[2]),parseInt(tp[0]),parseInt(tp[1]),0);
+    return new Date()>=kickoff;
+}
 function showToast(m) { var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},3000); }
 function getStageMultiplier(s) { if(s.indexOf('Group')>=0)return 5;if(s.indexOf('Round of 32')>=0)return 10;if(s.indexOf('Round of 16')>=0)return 15;if(s.indexOf('Quarter')>=0)return 20;if(s.indexOf('Semi')>=0)return 25;if(s.indexOf('Third')>=0)return 30;if(s.indexOf('Final')>=0)return 35;return 5; }
 function getEffectiveMatches(stage) { if(!PRELOADED_MATCHES[stage])return[];return PRELOADED_MATCHES[stage].map(function(m,i){var o=fixtureOverrides[stage]&&fixtureOverrides[stage][i];return{match:(o&&o.match)||m.match,venue:(o&&o.venue)||m.venue};}); }
@@ -607,6 +631,7 @@ document.getElementById('submit-prediction-btn').addEventListener('click',functi
     var stage=document.getElementById('pred-stage').value,match=document.getElementById('pred-match-select').value,team=document.getElementById('pred-team').value;
     if(!stage||!match||!team)return showToast('Fill all fields');
     if(gameData.winner)return showToast('Game over!');
+    if(hasMatchStarted(stage))return showToast('Predictions locked — match has started');
     var rk=(stage+'|'+match).toLowerCase(),scored=false;
     if(gameData.results){Object.keys(gameData.results).forEach(function(k){var r=gameData.results[k];if(r&&(r.stage+'|'+r.match).toLowerCase()===rk)scored=true;});}
     if(scored)return showToast('Match already played');
@@ -762,6 +787,7 @@ function renderStages(){
     var predStages=STAGES.filter(function(stage){
         var d=stageDate(stage);
         if(!d||d<today)return false;
+        if(hasMatchStarted(stage))return false;
         var matches=getEffectiveMatches(stage);
         if(!matches.length)return false;
         for(var i=0;i<matches.length;i++){
