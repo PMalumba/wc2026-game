@@ -631,7 +631,15 @@ document.getElementById('submit-prediction-btn').addEventListener('click',functi
     var stage=document.getElementById('pred-stage').value,match=document.getElementById('pred-match-select').value,team=document.getElementById('pred-team').value;
     if(!stage||!match||!team)return showToast('Fill all fields');
     if(gameData.winner)return showToast('Game over!');
-    if(hasMatchStarted(stage))return showToast('Predictions locked — match has started');
+    // Only lock predictions for games whose date is before today (games that have started)
+    var monthMapCheck={Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};
+    var partsCheck=stage.match(/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d+)/);
+    if(partsCheck){
+        var matchDateCheck=new Date(2026,monthMapCheck[partsCheck[1]],parseInt(partsCheck[2]));
+        matchDateCheck.setHours(0,0,0,0);
+        var todayCheck=new Date();todayCheck.setHours(0,0,0,0);
+        if(matchDateCheck<todayCheck)return showToast('Predictions locked — match has started');
+    }
     var rk=(stage+'|'+match).toLowerCase(),scored=false;
     if(gameData.results){Object.keys(gameData.results).forEach(function(k){var r=gameData.results[k];if(r&&(r.stage+'|'+r.match).toLowerCase()===rk)scored=true;});}
     if(scored)return showToast('Match already played');
@@ -787,7 +795,6 @@ function renderStages(){
     var predStages=STAGES.filter(function(stage){
         var d=stageDate(stage);
         if(!d||d<today)return false;
-        if(hasMatchStarted(stage))return false;
         var matches=getEffectiveMatches(stage);
         if(!matches.length)return false;
         for(var i=0;i<matches.length;i++){
