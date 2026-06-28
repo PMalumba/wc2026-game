@@ -734,7 +734,7 @@ async function fetchResults(){
             // Get the API match date for validation
             var apiMatchDate=m.match_date||''; // format: "2026-06-13"
 
-            var ms=null,mf=null;
+            var ms=null,mf=null,mfIdx=null;
             Object.keys(PRELOADED_MATCHES).forEach(function(stage){
                 // Validate: only match fixtures whose date matches the API match date
                 var fixtureDate=stageToDate(stage);
@@ -742,14 +742,62 @@ async function fetchResults(){
                     var apiD=new Date(apiMatchDate+'T12:00:00');
                     if(fixtureDate.getFullYear()!==apiD.getFullYear()||fixtureDate.getMonth()!==apiD.getMonth()||fixtureDate.getDate()!==apiD.getDate())return;
                 }
-                getEffectiveMatches(stage).forEach(function(x){
+                getEffectiveMatches(stage).forEach(function(x,idx){
                     if(teamMatches(ht,x.match)&&teamMatches(at,x.match)){
                         var rk=btoa(unescape(encodeURIComponent(stage+'|'+x.match))).replace(/[.#$/\[\]]/g,'_');
-                        if(!gameData.results||!gameData.results[rk]){ms=stage;mf=x.match;}
+                        if(!gameData.results||!gameData.results[rk]){ms=stage;mf=x.match;mfIdx=idx;}
                     }
                 });
             });
-            if(ms&&mf){recordResult(ms,mf,winner,score);n++;console.log('✅ SCORED:',ht,hg+'-'+ag,at);}
+
+            // If no team-name match found, try matching placeholder knockout fixtures by date
+            if(!ms){
+                Object.keys(PRELOADED_MATCHES).forEach(function(stage){
+                    if(ms)return; // already found
+                    // Only try knockout stages (not Group Stage)
+                    if(stage.indexOf('Group')>=0)return;
+                    // Validate date matches
+                    var fixtureDate=stageToDate(stage);
+                    if(apiMatchDate&&fixtureDate){
+                        var apiD=new Date(apiMatchDate+'T12:00:00');
+                        if(fixtureDate.getFullYear()!==apiD.getFullYear()||fixtureDate.getMonth()!==apiD.getMonth()||fixtureDate.getDate()!==apiD.getDate())return;
+                    }
+                    // Look for placeholder fixtures on this date that don't have results yet
+                    getEffectiveMatches(stage).forEach(function(x,idx){
+                        if(ms)return;
+                        // Detect placeholder: contains patterns like "1A vs 2B", "W73 vs W75", etc.
+                        var isPlaceholder=/\b((\d[A-L])|([WM]\d+)|(1st|2nd|3rd))\b/i.test(x.match.replace(/\(.*?\)/g,''));
+                        if(!isPlaceholder)return;
+                        var rk=btoa(unescape(encodeURIComponent(stage+'|'+x.match))).replace(/[.#$/\[\]]/g,'_');
+                        if(!gameData.results||!gameData.results[rk]){ms=stage;mf=x.match;mfIdx=idx;}
+                    });
+                });
+            }
+
+            if(ms&&mf){
+                // Auto-update fixture name if it was a placeholder
+                var isPlaceholderMatch=/\b((\d[A-L])|([WM]\d+)|(1st|2nd|3rd))\b/i.test(mf.replace(/\(.*?\)/g,''));
+                if(isPlaceholderMatch&&mfIdx!==null){
+                    // Build a proper fixture name from the API teams
+                    var roundLabel=ms.match(/Round of 32|Round of 16|Quarter-Final|Semi-Final|Third Place|Final/);
+                    var newFixtureName=ht+' vs '+at+(roundLabel?' ('+roundLabel[0]+')':'');
+                    console.log('🔄 Auto-renaming fixture: "'+mf+'" → "'+newFixtureName+'"');
+                    // Save the override to Firebase or local
+                    if(firebaseReady){
+                        db.ref('fixtures/'+ms+'/'+mfIdx).set({match:newFixtureName,venue:PRELOADED_MATCHES[ms][mfIdx]?PRELOADED_MATCHES[ms][mfIdx].venue:''});
+                    } else {
+                        if(!fixtureOverrides[ms])fixtureOverrides[ms]={};
+                        fixtureOverrides[ms][mfIdx]={match:newFixtureName,venue:PRELOADED_MATCHES[ms][mfIdx]?PRELOADED_MATCHES[ms][mfIdx].venue:''};
+                        localStorage.setItem('wc2026_fixtures',JSON.stringify(fixtureOverrides));
+                    }
+                    // Record the result using the NEW fixture name so predictions can be matched
+                    recordResult(ms,newFixtureName,winner,score);n++;
+                    console.log('✅ SCORED (auto-renamed):',ht,hg+'-'+ag,at,'→',newFixtureName);
+                } else {
+                    recordResult(ms,mf,winner,score);n++;
+                    console.log('✅ SCORED:',ht,hg+'-'+ag,at);
+                }
+            }
             else{console.log('⚠️ NO FIXTURE MATCH:',ht,'vs',at,'(may already be recorded or date mismatch)');}
         });
         el.textContent='✅ Done! '+n+' new result(s) scored.';
