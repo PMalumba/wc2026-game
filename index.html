@@ -357,34 +357,34 @@ const PRELOADED_MATCHES = {
         { match: 'DR Congo vs Uzbekistan (Group K)', venue: 'Atlanta Stadium' },
         { match: 'Algeria vs Austria (Group J)', venue: 'Kansas City Stadium' },
         { match: 'Jordan vs Argentina (Group J)', venue: 'Dallas Stadium' },
-        { match: 'M73: 2A vs 2B (Round of 32)', venue: 'Los Angeles Stadium' }
+        { match: 'South Africa vs Canada (Round of 32)', venue: 'Los Angeles Stadium' }
     ],
     'Round of 32 - Mon Jun 29': [
-        { match: 'M76: 1C vs 2F (Round of 32)', venue: 'Houston Stadium' },
-        { match: 'M74: 1E vs 3rd (Round of 32)', venue: 'Boston Stadium' }
+        { match: 'Netherlands vs Morocco (Round of 32)', venue: 'Houston Stadium' },
+        { match: 'Germany vs Paraguay (Round of 32)', venue: 'Boston Stadium' }
     ],
     'Round of 32 - Tue Jun 30': [
-        { match: 'M75: 1F vs 2C (Round of 32)', venue: 'Monterrey Stadium' },
-        { match: 'M78: 2E vs 2I (Round of 32)', venue: 'Dallas Stadium' },
-        { match: 'M77: 1I vs 3rd (Round of 32)', venue: 'New York New Jersey Stadium' }
+        { match: 'Brazil vs Japan (Round of 32)', venue: 'Monterrey Stadium' },
+        { match: 'Ivory Coast vs Norway (Round of 32)', venue: 'Dallas Stadium' },
+        { match: 'France vs Sweden (Round of 32)', venue: 'New York New Jersey Stadium' }
     ],
     'Round of 32 - Wed Jul 1': [
-        { match: 'M79: 1A vs 3rd (Round of 32)', venue: 'Mexico City Stadium' },
-        { match: 'M80: 1L vs 3rd (Round of 32)', venue: 'Atlanta Stadium' },
-        { match: 'M82: 1G vs 3rd (Round of 32)', venue: 'Seattle Stadium' }
+        { match: 'Mexico vs Ecuador (Round of 32)', venue: 'Mexico City Stadium' },
+        { match: 'England vs DR Congo (Round of 32)', venue: 'Atlanta Stadium' },
+        { match: 'Belgium vs Senegal (Round of 32)', venue: 'Seattle Stadium' }
     ],
     'Round of 32 - Thu Jul 2': [
-        { match: 'M81: 1D vs 3rd (Round of 32)', venue: 'San Francisco Bay Area Stadium' },
-        { match: 'M84: 1H vs 2J (Round of 32)', venue: 'Los Angeles Stadium' }
+        { match: 'USA vs Bosnia & Herzegovina (Round of 32)', venue: 'San Francisco Bay Area Stadium' },
+        { match: 'Spain vs Austria (Round of 32)', venue: 'Los Angeles Stadium' }
     ],
     'Round of 32 - Fri Jul 3': [
-        { match: 'M83: 2K vs 2L (Round of 32)', venue: 'Toronto Stadium' },
-        { match: 'M85: 1B vs 3rd (Round of 32)', venue: 'BC Place Vancouver' },
-        { match: 'M88: 2D vs 2G (Round of 32)', venue: 'Dallas Stadium' }
+        { match: 'Portugal vs Croatia (Round of 32)', venue: 'Toronto Stadium' },
+        { match: 'Switzerland vs Algeria (Round of 32)', venue: 'BC Place Vancouver' },
+        { match: 'Australia vs Egypt (Round of 32)', venue: 'Dallas Stadium' }
     ],
     'Round of 32 - Sat Jul 4': [
-        { match: 'M86: 1J vs 2H (Round of 32)', venue: 'Miami Stadium' },
-        { match: 'M87: 1K vs 3rd (Round of 32)', venue: 'Kansas City Stadium' }
+        { match: 'Argentina vs Cabo Verde (Round of 32)', venue: 'Miami Stadium' },
+        { match: 'Colombia vs Ghana (Round of 32)', venue: 'Kansas City Stadium' }
     ],
     'Round of 16 - Sat Jul 4': [
         { match: 'M90: W73 vs W75 (Round of 16)', venue: 'Houston Stadium' },
@@ -438,7 +438,8 @@ var TEAM_ALIASES = {
     'ivory coast': ['côte d\'ivoire','cote d\'ivoire','ivory coast','cote divoire'],
     'usa': ['united states','usa','us'],
     'iran': ['ir iran','iran'],
-    'dr congo': ['congo dr','dr congo','drc','dem. rep. congo','democratic republic of congo','congo']
+    'dr congo': ['congo dr','dr congo','drc','dem. rep. congo','democratic republic of congo','congo'],
+    'cabo verde': ['cabo verde','cape verde']
 };
 function teamMatches(apiName, fixtureName) {
     var a = apiName.toLowerCase().trim(), f = fixtureName.toLowerCase();
@@ -501,7 +502,7 @@ function persist(path, val) { if (firebaseReady) gameRef.child(path).set(val); e
 function persistUpdate(u) { if (firebaseReady) gameRef.update(u); else { Object.keys(u).forEach(function(path){var p=path.split('/'),o=gameData;for(var i=0;i<p.length-1;i++){if(!o[p[i]])o[p[i]]={};o=o[p[i]];}o[p[p.length-1]]=u[path];}); saveLocal(); renderAll(); } }
 
 // ==================== HELPERS ====================
-var FLAGS={'mexico':'mx','south africa':'za','south korea':'kr','czech republic':'cz','canada':'ca','bosnia & herzegovina':'ba','usa':'us','paraguay':'py','qatar':'qa','switzerland':'ch','brazil':'br','morocco':'ma','haiti':'ht','scotland':'gb-sct','australia':'au','turkey':'tr','germany':'de','curacao':'cw','netherlands':'nl','japan':'jp','ivory coast':'ci','ecuador':'ec','sweden':'se','tunisia':'tn','spain':'es','cabo verde':'cv','belgium':'be','egypt':'eg','saudi arabia':'sa','uruguay':'uy','iran':'ir','new zealand':'nz','france':'fr','senegal':'sn','iraq':'iq','norway':'no','argentina':'ar','algeria':'dz','austria':'at','jordan':'jo','portugal':'pt','dr congo':'cd','england':'gb-eng','croatia':'hr','ghana':'gh','panama':'pa','uzbekistan':'uz','colombia':'co'};
+var FLAGS={'mexico':'mx','south africa':'za','south korea':'kr','czech republic':'cz','canada':'ca','bosnia & herzegovina':'ba','usa':'us','paraguay':'py','qatar':'qa','switzerland':'ch','brazil':'br','morocco':'ma','haiti':'ht','scotland':'gb-sct','australia':'au','turkey':'tr','germany':'de','curacao':'cw','netherlands':'nl','japan':'jp','ivory coast':'ci','ecuador':'ec','sweden':'se','tunisia':'tn','spain':'es','cabo verde':'cv','cape verde':'cv','belgium':'be','egypt':'eg','saudi arabia':'sa','uruguay':'uy','iran':'ir','new zealand':'nz','france':'fr','senegal':'sn','iraq':'iq','norway':'no','argentina':'ar','algeria':'dz','austria':'at','jordan':'jo','portugal':'pt','dr congo':'cd','england':'gb-eng','croatia':'hr','ghana':'gh','panama':'pa','uzbekistan':'uz','colombia':'co'};
 function getFlag(team){var code=FLAGS[team.toLowerCase().trim()];if(!code)return'';return'<img src="https://flagcdn.com/20x15/'+code+'.png" alt="'+team+'" style="vertical-align:middle;margin:0 2px;" width="20" height="15">';}
 // Kickoff times (SAST) for each match date — earliest kickoff on that day
 var KICKOFF_TIMES = {
