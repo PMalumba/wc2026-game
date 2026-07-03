@@ -482,7 +482,7 @@ if (firebaseReady) {
         else { gameData = { players:[], predictions:{}, results:{}, winner:null }; }
         saveLocal(); seedR32Results(); backfillBracket(); renderAll();
     }, function(err) { firebaseReady = false; gameData = loadLocal() || gameData; renderAll(); });
-    db.ref('fixtures').on('value', function(snap) { fixtureOverrides = snap.val()||{}; renderAll(); });
+    db.ref('fixtures').on('value', function(snap) { fixtureOverrides = snap.val()||{}; seedR32Results(); backfillBracket(); renderAll(); });
     db.ref('.info/connected').on('value', function(s) {
         var el = document.getElementById('sync-status');
         el.textContent = s.val() ? '🟢 Connected — syncing live' : '🔴 Offline';
@@ -1144,8 +1144,40 @@ function seedR32Results() {
         }
     });
 
+    // Also seed the confirmed Round of 16 fixture names into overrides
+    var R16_FIXTURES = {
+        'Round of 16 - Sat Jul 4': [
+            { match: 'Canada vs Morocco (Round of 16)', venue: 'Houston Stadium' },
+            { match: 'Paraguay vs France (Round of 16)', venue: 'Philadelphia Stadium' }
+        ],
+        'Round of 16 - Sun Jul 5': [
+            { match: 'Brazil vs Norway (Round of 16)', venue: 'New York New Jersey Stadium' }
+        ],
+        'Round of 16 - Mon Jul 6': [
+            { match: 'Mexico vs England (Round of 16)', venue: 'Mexico City Stadium' },
+            { match: 'Portugal vs Spain (Round of 16)', venue: 'Dallas Stadium' }
+        ],
+        'Round of 16 - Tue Jul 7': [
+            { match: 'USA vs Belgium (Round of 16)', venue: 'Seattle Stadium' }
+        ]
+    };
+
+    // Apply fixture overrides for confirmed R16 matches
+    var fixtureUpdates = {};
+    Object.keys(R16_FIXTURES).forEach(function(stage) {
+        R16_FIXTURES[stage].forEach(function(fix, idx) {
+            // Check if already set correctly
+            var current = fixtureOverrides[stage] && fixtureOverrides[stage][idx];
+            if (current && current.match === fix.match) return;
+            // Set override in memory
+            if (!fixtureOverrides[stage]) fixtureOverrides[stage] = {};
+            fixtureOverrides[stage][idx] = fix;
+            fixtureUpdates[stage + '/' + idx] = fix;
+        });
+    });
+
     // Only persist to Firebase once
-    if (needsPersist && !_r32Seeded) {
+    if ((needsPersist || Object.keys(fixtureUpdates).length) && !_r32Seeded) {
         _r32Seeded = true;
         if (firebaseReady) {
             var u = {};
@@ -1160,10 +1192,15 @@ function seedR32Results() {
                 });
             }
             gameRef.update(u);
+            // Push fixture overrides separately
+            if (Object.keys(fixtureUpdates).length) {
+                db.ref('fixtures').update(fixtureUpdates);
+            }
         } else {
             saveLocal();
+            localStorage.setItem('wc2026_fixtures', JSON.stringify(fixtureOverrides));
         }
-        console.log('✅ Seeded ' + seeded + ' Round of 32 results to database');
+        console.log('✅ Seeded ' + seeded + ' R32 results + R16 fixtures');
     }
 }
 
