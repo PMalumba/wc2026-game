@@ -116,7 +116,7 @@
         <div class="card">
             <h2>🎯 Make Your Prediction</h2>
             <div class="info-box">
-                ⚽ Group = 5pts | 🏟️ R32 = 10pts | 🎯 R16 = 15pts | 🔥 QF = 20pts | ⭐ SF = 25pts | 🥉 3rd = 30pts | 🏆 Final = 35pts<br>Exact score bonus: +1pt
+                ⚽ Group = 5pts | 🏟️ R32 = 10pts | 🎯 R16 = 15pts | 🔥 QF = 20pts | ⭐ SF = 25pts | 🥉 3rd = 30pts | 🏆 Final = 35pts<br>Exact score bonus: +5pts
             </div>
             <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
                 <div style="flex:1;min-width:180px;">
@@ -391,20 +391,20 @@ const PRELOADED_MATCHES = {
     ],
     'Round of 16 - Tue Jul 7': [
         { match: 'USA vs Belgium (Round of 16)', venue: 'Seattle Stadium' },
-        { match: 'Argentina vs Australia (Round of 16)', venue: 'Atlanta Stadium' },
+        { match: 'Argentina vs Egypt (Round of 16)', venue: 'Atlanta Stadium' },
         { match: 'Switzerland vs Colombia (Round of 16)', venue: 'BC Place Vancouver' }
     ],
     'Quarter-Final - Thu Jul 9': [
-        { match: 'Morocco vs France (Quarter-Final)', venue: 'Boston Stadium' }
+        { match: 'France vs Morocco (Quarter-Final)', venue: 'Boston Stadium' }
     ],
     'Quarter-Final - Fri Jul 10': [
-        { match: 'QF2: W93 vs W94', venue: 'Los Angeles Stadium' }
+        { match: 'Spain vs Belgium (Quarter-Final)', venue: 'Los Angeles Stadium' }
     ],
     'Quarter-Final - Sat Jul 11': [
-        { match: 'QF3: W91 vs W92', venue: 'Miami Stadium' }
+        { match: 'Norway vs England (Quarter-Final)', venue: 'Miami Stadium' }
     ],
     'Quarter-Final - Sun Jul 12': [
-        { match: 'QF4: W95 vs W96', venue: 'Kansas City Stadium' }
+        { match: 'Argentina vs Switzerland (Quarter-Final)', venue: 'Kansas City Stadium' }
     ],
     'Semi-Final - Tue Jul 14': [
         { match: 'SF1: W97 vs W98', venue: 'Dallas Stadium' }
@@ -523,7 +523,7 @@ function hasMatchStarted(stage){
 function showToast(m) { var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},3000); }
 function getStageMultiplier(s, matchName) { var m=matchName||''; if(m.indexOf('Round of 32')>=0)return 10;if(m.indexOf('Round of 16')>=0)return 15;if(m.indexOf('Quarter')>=0)return 20;if(m.indexOf('Semi')>=0)return 25;if(m.indexOf('Third')>=0)return 30;if(m.indexOf('Final')>=0&&m.indexOf('Semi')<0)return 35; if(s.indexOf('Round of 32')>=0)return 10;if(s.indexOf('Round of 16')>=0)return 15;if(s.indexOf('Quarter')>=0)return 20;if(s.indexOf('Semi')>=0)return 25;if(s.indexOf('Third')>=0)return 30;if(s.indexOf('Final')>=0)return 35;if(s.indexOf('Group')>=0)return 5;return 5; }
 function getEffectiveMatches(stage) { if(!PRELOADED_MATCHES[stage])return[];return PRELOADED_MATCHES[stage].map(function(m,i){var o=fixtureOverrides[stage]&&fixtureOverrides[stage][i];return{match:(o&&o.match)||m.match,venue:(o&&o.venue)||m.venue};}); }
-function getScores() { var s={};(gameData.players||[]).forEach(function(p){s[p]=0;});if(gameData.predictions){Object.keys(gameData.predictions).forEach(function(k){var p=gameData.predictions[k];if(p&&p.correct)s[p.player]=(s[p.player]||0)+getStageMultiplier(p.stage,p.match);if(p&&p.scoreCorrect)s[p.player]=(s[p.player]||0)+1;});}return Object.keys(s).map(function(n){return{name:n,points:s[n]};}).sort(function(a,b){return b.points-a.points;}); }
+function getScores() { var s={};(gameData.players||[]).forEach(function(p){s[p]=0;});if(gameData.predictions){Object.keys(gameData.predictions).forEach(function(k){var p=gameData.predictions[k];if(p&&p.correct)s[p.player]=(s[p.player]||0)+getStageMultiplier(p.stage,p.match);if(p&&p.scoreCorrect)s[p.player]=(s[p.player]||0)+5;});}return Object.keys(s).map(function(n){return{name:n,points:s[n]};}).sort(function(a,b){return b.points-a.points;}); }
 
 // ==================== TABS ====================
 document.querySelectorAll('.tab-btn').forEach(function(b){b.addEventListener('click',function(){
@@ -725,8 +725,20 @@ function propagateWinner(stage, match, winner) {
         var pos = MATCH_NUM_MAP[num];
         if (pos.stage === stage) {
             var effective = getEffectiveMatches(stage);
-            if (effective[pos.idx] && effective[pos.idx].match.toLowerCase() === match.toLowerCase()) {
-                matchNum = parseInt(num);
+            if (!effective[pos.idx]) return;
+            // Match by exact name OR by team names present in both
+            var effName = effective[pos.idx].match.toLowerCase();
+            var matchLower = match.toLowerCase();
+            if (effName === matchLower) { matchNum = parseInt(num); return; }
+            // Fuzzy: extract teams and compare
+            var effClean = effName.replace(/\(.*?\)/g,'').replace(/^[^:]*:\s*/,'').trim();
+            var mClean = matchLower.replace(/\(.*?\)/g,'').replace(/^[^:]*:\s*/,'').trim();
+            var effParts = effClean.split(/\s+vs\s+/);
+            var mParts = mClean.split(/\s+vs\s+/);
+            if (effParts.length === 2 && mParts.length === 2) {
+                var effTeams = [effParts[0].trim(), effParts[1].trim()].sort();
+                var mTeams = [mParts[0].trim(), mParts[1].trim()].sort();
+                if (effTeams[0] === mTeams[0] && effTeams[1] === mTeams[1]) { matchNum = parseInt(num); }
             }
         }
     });
@@ -1008,7 +1020,7 @@ function renderMyPredictions(){
     c.innerHTML='<p style="color:#68d391;font-size:0.8rem;margin-bottom:8px;">'+preds.length+' prediction(s) by '+player+' — select a match above to update</p>'+preds.map(function(p){
         var st=!p.scored?'Pending':p.correct?'✓ Correct':'✗ Wrong';
         var bc=!p.scored?'badge-pending':p.correct?'badge-correct':'badge-wrong';
-        var pts=p.correct?'+'+getStageMultiplier(p.stage,p.match)+(p.scoreCorrect?'+1':'')+'pts':'';
+        var pts=p.correct?'+'+getStageMultiplier(p.stage,p.match)+(p.scoreCorrect?'+5':'')+'pts':'';
         return'<div class="prediction-item"><div class="prediction-info"><span class="player-name">'+p.match+'</span><div class="prediction-detail">'+p.stage+' → '+p.team+(p.predictedScore?' ('+p.predictedScore+')':'')+(pts?' · <strong style="color:#68d391">'+pts+'</strong>':'')+'</div></div><span class="badge '+bc+'">'+st+'</span></div>';
     }).join('');
 }
@@ -1128,6 +1140,23 @@ function renderDashboard(){var tp=gameData.predictions?Object.keys(gameData.pred
 function rescoreAllPredictions() {
     if (!gameData.predictions || !gameData.results) return;
     var changed = false;
+
+    // REPAIR: Argentina vs Egypt game was displayed as "Argentina vs Australia" — award 15pts to all who predicted on that slot
+    Object.keys(gameData.predictions).forEach(function(k) {
+        var p = gameData.predictions[k];
+        if (!p) return;
+        // Match predictions on Tue Jul 7 that contain "argentina" and ("australia" or "egypt") in the match name
+        if (p.stage === 'Round of 16 - Tue Jul 7' &&
+            p.match.toLowerCase().indexOf('argentina') >= 0 &&
+            (p.match.toLowerCase().indexOf('australia') >= 0 || p.match.toLowerCase().indexOf('egypt') >= 0)) {
+            if (!p.scored || !p.correct) {
+                p.scored = true;
+                p.correct = true;
+                p.scoreCorrect = false;
+                changed = true;
+            }
+        }
+    });
 
     // REPAIR: Fix Netherlands vs Morocco predictions that were stored as "Brazil vs Japan" on Tue Jun 30
     var moroccoResult = null;
@@ -1280,11 +1309,17 @@ var CONFIRMED_R32_RESULTS = [
     { stage: 'Round of 32 - Thu Jul 2', match: 'Spain vs Austria (Round of 32)', winner: 'Spain', score: null },
     { stage: 'Round of 32 - Fri Jul 3', match: 'Portugal vs Croatia (Round of 32)', winner: 'Portugal', score: null },
     { stage: 'Round of 32 - Fri Jul 3', match: 'Switzerland vs Algeria (Round of 32)', winner: 'Switzerland', score: null },
-    { stage: 'Round of 32 - Fri Jul 3', match: 'Australia vs Egypt (Round of 32)', winner: 'Australia', score: null },
+    { stage: 'Round of 32 - Fri Jul 3', match: 'Australia vs Egypt (Round of 32)', winner: 'Egypt', score: null },
     { stage: 'Round of 32 - Sat Jul 4', match: 'Argentina vs Cabo Verde (Round of 32)', winner: 'Argentina', score: '3-2' },
     { stage: 'Round of 32 - Sat Jul 4', match: 'Colombia vs Ghana (Round of 32)', winner: 'Colombia', score: '1-0' },
     { stage: 'Round of 16 - Sat Jul 4', match: 'Canada vs Morocco (Round of 16)', winner: 'Morocco', score: '0-3' },
-    { stage: 'Round of 16 - Sat Jul 4', match: 'Paraguay vs France (Round of 16)', winner: 'France', score: '0-1' }
+    { stage: 'Round of 16 - Sat Jul 4', match: 'Paraguay vs France (Round of 16)', winner: 'France', score: '0-1' },
+    { stage: 'Round of 16 - Sun Jul 5', match: 'Brazil vs Norway (Round of 16)', winner: 'Norway', score: null },
+    { stage: 'Round of 16 - Mon Jul 6', match: 'Mexico vs England (Round of 16)', winner: 'England', score: null },
+    { stage: 'Round of 16 - Mon Jul 6', match: 'Portugal vs Spain (Round of 16)', winner: 'Spain', score: null },
+    { stage: 'Round of 16 - Tue Jul 7', match: 'USA vs Belgium (Round of 16)', winner: 'Belgium', score: null },
+    { stage: 'Round of 16 - Tue Jul 7', match: 'Argentina vs Egypt (Round of 16)', winner: 'Argentina', score: null },
+    { stage: 'Round of 16 - Tue Jul 7', match: 'Switzerland vs Colombia (Round of 16)', winner: 'Switzerland', score: null }
 ];
 
 var _r32Seeded = false;
@@ -1346,11 +1381,20 @@ function seedR32Results() {
         ],
         'Round of 16 - Tue Jul 7': [
             { match: 'USA vs Belgium (Round of 16)', venue: 'Seattle Stadium' },
-            { match: 'Argentina vs Australia (Round of 16)', venue: 'Atlanta Stadium' },
+            { match: 'Argentina vs Egypt (Round of 16)', venue: 'Atlanta Stadium' },
             { match: 'Switzerland vs Colombia (Round of 16)', venue: 'BC Place Vancouver' }
         ],
         'Quarter-Final - Thu Jul 9': [
-            { match: 'Morocco vs France (Quarter-Final)', venue: 'Boston Stadium' }
+            { match: 'France vs Morocco (Quarter-Final)', venue: 'Boston Stadium' }
+        ],
+        'Quarter-Final - Fri Jul 10': [
+            { match: 'Spain vs Belgium (Quarter-Final)', venue: 'Los Angeles Stadium' }
+        ],
+        'Quarter-Final - Sat Jul 11': [
+            { match: 'Norway vs England (Quarter-Final)', venue: 'Miami Stadium' }
+        ],
+        'Quarter-Final - Sun Jul 12': [
+            { match: 'Argentina vs Switzerland (Quarter-Final)', venue: 'Kansas City Stadium' }
         ]
     };
 
@@ -1415,8 +1459,19 @@ function backfillBracket() {
             var pos = MATCH_NUM_MAP[num];
             if (pos.stage === r.stage) {
                 var effective = getEffectiveMatches(r.stage);
-                if (effective[pos.idx] && effective[pos.idx].match.toLowerCase() === r.match.toLowerCase()) {
-                    matchNum = parseInt(num);
+                if (!effective[pos.idx]) return;
+                var effName = effective[pos.idx].match.toLowerCase();
+                var rName = r.match.toLowerCase();
+                if (effName === rName) { matchNum = parseInt(num); return; }
+                // Fuzzy team match
+                var effClean = effName.replace(/\(.*?\)/g,'').replace(/^[^:]*:\s*/,'').trim();
+                var rClean = rName.replace(/\(.*?\)/g,'').replace(/^[^:]*:\s*/,'').trim();
+                var effParts = effClean.split(/\s+vs\s+/);
+                var rParts = rClean.split(/\s+vs\s+/);
+                if (effParts.length === 2 && rParts.length === 2) {
+                    var effTeams = [effParts[0].trim(), effParts[1].trim()].sort();
+                    var rTeams = [rParts[0].trim(), rParts[1].trim()].sort();
+                    if (effTeams[0] === rTeams[0] && effTeams[1] === rTeams[1]) { matchNum = parseInt(num); }
                 }
             }
         });
