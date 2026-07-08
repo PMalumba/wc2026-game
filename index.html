@@ -1141,6 +1141,43 @@ function rescoreAllPredictions() {
     if (!gameData.predictions || !gameData.results) return;
     var changed = false;
 
+    // REPAIR: Deduplicate predictions — same player, same teams = keep only the latest
+    (function() {
+        var seen = {}; // key: "player|teamA|teamB" (sorted) → {key, timestamp}
+        var toDelete = [];
+        Object.keys(gameData.predictions).forEach(function(k) {
+            var p = gameData.predictions[k];
+            if (!p || !p.player || !p.match) return;
+            var clean = p.match.replace(/\(.*?\)/g, '').replace(/^[^:]*:\s*/, '').trim().toLowerCase();
+            var parts = clean.split(/\s+vs\s+/);
+            if (parts.length !== 2) return;
+            var teams = [parts[0].trim(), parts[1].trim()].sort();
+            var dedupKey = p.player.toLowerCase() + '|' + teams[0] + '|' + teams[1];
+            if (seen[dedupKey]) {
+                // Keep the one with the later timestamp
+                var existing = seen[dedupKey];
+                if ((p.timestamp || 0) > (existing.timestamp || 0)) {
+                    toDelete.push(existing.key);
+                    seen[dedupKey] = { key: k, timestamp: p.timestamp || 0 };
+                } else {
+                    toDelete.push(k);
+                }
+            } else {
+                seen[dedupKey] = { key: k, timestamp: p.timestamp || 0 };
+            }
+        });
+        if (toDelete.length) {
+            toDelete.forEach(function(k) { delete gameData.predictions[k]; });
+            changed = true;
+            if (firebaseReady) {
+                var u = {};
+                toDelete.forEach(function(k) { u['predictions/' + k] = null; });
+                gameRef.update(u);
+            }
+            console.log('✅ Deduplicated ' + toDelete.length + ' duplicate prediction(s)');
+        }
+    })();
+
     // REPAIR: Argentina vs Egypt game was displayed as "Argentina vs Australia" — award 15pts to all who predicted on that slot
     Object.keys(gameData.predictions).forEach(function(k) {
         var p = gameData.predictions[k];
