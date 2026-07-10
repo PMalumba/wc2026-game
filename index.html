@@ -523,7 +523,11 @@ function hasMatchStarted(stage){
 function showToast(m) { var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},3000); }
 function getStageMultiplier(s, matchName) { var m=matchName||''; if(m.indexOf('Round of 32')>=0)return 10;if(m.indexOf('Round of 16')>=0)return 15;if(m.indexOf('Quarter')>=0)return 20;if(m.indexOf('Semi')>=0)return 25;if(m.indexOf('Third')>=0)return 30;if(m.indexOf('Final')>=0&&m.indexOf('Semi')<0)return 35; if(s.indexOf('Round of 32')>=0)return 10;if(s.indexOf('Round of 16')>=0)return 15;if(s.indexOf('Quarter')>=0)return 20;if(s.indexOf('Semi')>=0)return 25;if(s.indexOf('Third')>=0)return 30;if(s.indexOf('Final')>=0)return 35;if(s.indexOf('Group')>=0)return 5;return 5; }
 function getEffectiveMatches(stage) { if(!PRELOADED_MATCHES[stage])return[];return PRELOADED_MATCHES[stage].map(function(m,i){var o=fixtureOverrides[stage]&&fixtureOverrides[stage][i];return{match:(o&&o.match)||m.match,venue:(o&&o.venue)||m.venue};}); }
-function getScores() { var s={};(gameData.players||[]).forEach(function(p){s[p]=0;});if(gameData.predictions){Object.keys(gameData.predictions).forEach(function(k){var p=gameData.predictions[k];if(p&&p.correct)s[p.player]=(s[p.player]||0)+getStageMultiplier(p.stage,p.match);if(p&&p.scoreCorrect)s[p.player]=(s[p.player]||0)+5;});}return Object.keys(s).map(function(n){return{name:n,points:s[n]};}).sort(function(a,b){return b.points-a.points;}); }
+function getScores() { var s={};(gameData.players||[]).forEach(function(p){s[p]=0;});if(gameData.predictions){Object.keys(gameData.predictions).forEach(function(k){var p=gameData.predictions[k];if(p&&p.correct)s[p.player]=(s[p.player]||0)+getStageMultiplier(p.stage,p.match);if(p&&p.scoreCorrect)s[p.player]=(s[p.player]||0)+5;});}
+    // Manual point adjustments
+    var BONUS_POINTS = {'Harsha': 5};
+    Object.keys(BONUS_POINTS).forEach(function(name){if(s[name]!==undefined)s[name]+=BONUS_POINTS[name];});
+    return Object.keys(s).map(function(n){return{name:n,points:s[n]};}).sort(function(a,b){return b.points-a.points;}); }
 
 // ==================== TABS ====================
 document.querySelectorAll('.tab-btn').forEach(function(b){b.addEventListener('click',function(){
@@ -1141,9 +1145,9 @@ function rescoreAllPredictions() {
     if (!gameData.predictions || !gameData.results) return;
     var changed = false;
 
-    // REPAIR: Deduplicate predictions — same player, same teams = keep only the latest
+    // REPAIR: Deduplicate predictions — same player, same teams = keep the scored/correct one, or latest
     (function() {
-        var seen = {}; // key: "player|teamA|teamB" (sorted) → {key, timestamp}
+        var seen = {}; // key: "player|teamA|teamB" (sorted) → {key, timestamp, correct, scored}
         var toDelete = [];
         Object.keys(gameData.predictions).forEach(function(k) {
             var p = gameData.predictions[k];
@@ -1154,13 +1158,22 @@ function rescoreAllPredictions() {
             var teams = [parts[0].trim(), parts[1].trim()].sort();
             var dedupKey = p.player.toLowerCase() + '|' + teams[0] + '|' + teams[1];
             if (seen[dedupKey]) {
-                // Keep the one with the later timestamp
+                // Priority: scored+correct > scored > latest timestamp
                 var existing = seen[dedupKey];
-                if ((p.timestamp || 0) > (existing.timestamp || 0)) {
+                var existingPred = gameData.predictions[existing.key];
+                var keepExisting = false;
+                if (existingPred.scored && existingPred.correct && !(p.scored && p.correct)) {
+                    keepExisting = true;
+                } else if (p.scored && p.correct && !(existingPred.scored && existingPred.correct)) {
+                    keepExisting = false;
+                } else {
+                    keepExisting = (existing.timestamp || 0) >= (p.timestamp || 0);
+                }
+                if (keepExisting) {
+                    toDelete.push(k);
+                } else {
                     toDelete.push(existing.key);
                     seen[dedupKey] = { key: k, timestamp: p.timestamp || 0 };
-                } else {
-                    toDelete.push(k);
                 }
             } else {
                 seen[dedupKey] = { key: k, timestamp: p.timestamp || 0 };
