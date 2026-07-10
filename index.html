@@ -480,9 +480,9 @@ if (firebaseReady) {
         var d = snap.val();
         if (d) { gameData.players = d.players||[]; gameData.predictions = d.predictions||{}; gameData.results = d.results||{}; gameData.winner = d.winner||null; }
         else { gameData = { players:[], predictions:{}, results:{}, winner:null }; }
-        saveLocal(); seedR32Results(); rescoreAllPredictions(); backfillBracket(); renderAll();
+        saveLocal(); seedR32Results(); backfillBracket(); renderAll();
     }, function(err) { firebaseReady = false; gameData = loadLocal() || gameData; renderAll(); });
-    db.ref('fixtures').on('value', function(snap) { fixtureOverrides = snap.val()||{}; seedR32Results(); rescoreAllPredictions(); backfillBracket(); renderAll(); });
+    db.ref('fixtures').on('value', function(snap) { fixtureOverrides = snap.val()||{}; seedR32Results(); backfillBracket(); renderAll(); });
     db.ref('.info/connected').on('value', function(s) {
         var el = document.getElementById('sync-status');
         el.textContent = s.val() ? '🟢 Connected — syncing live' : '🔴 Offline';
@@ -525,7 +525,7 @@ function getStageMultiplier(s, matchName) { var m=matchName||''; if(m.indexOf('R
 function getEffectiveMatches(stage) { if(!PRELOADED_MATCHES[stage])return[];return PRELOADED_MATCHES[stage].map(function(m,i){var o=fixtureOverrides[stage]&&fixtureOverrides[stage][i];return{match:(o&&o.match)||m.match,venue:(o&&o.venue)||m.venue};}); }
 function getScores() { var s={};(gameData.players||[]).forEach(function(p){s[p]=0;});if(gameData.predictions){Object.keys(gameData.predictions).forEach(function(k){var p=gameData.predictions[k];if(p&&p.correct)s[p.player]=(s[p.player]||0)+getStageMultiplier(p.stage,p.match);if(p&&p.scoreCorrect){var isQFOrLater=p.stage.indexOf('Quarter')>=0||p.stage.indexOf('Semi')>=0||p.stage.indexOf('Third')>=0||(p.stage.indexOf('Final')>=0&&p.stage.indexOf('Semi')<0);s[p.player]=(s[p.player]||0)+(isQFOrLater?5:1);}});}
     // Manual point adjustments
-    var BONUS_POINTS = {'Harsha': 5, 'Kaibe': 26, 'Dominique': -6, 'Jermaine': -15, 'Patience': 20, 'Tshepo4Arsenal': 6, 'Yusuf Haff': 16};
+    var BONUS_POINTS = {'Harsha': 5, 'Kaibe': 25, 'Dominique': 10, 'Jermaine': -15, 'Patience': 20, 'Tshepo4Arsenal': 6, 'Yusuf Haff': 16};
     Object.keys(BONUS_POINTS).forEach(function(name){if(s[name]!==undefined)s[name]+=BONUS_POINTS[name];});
     return Object.keys(s).map(function(n){return{name:n,points:s[n]};}).sort(function(a,b){return b.points-a.points;}); }
 
@@ -1536,7 +1536,6 @@ function backfillBracket() {
 // ==================== INIT ====================
 gameData = loadLocal() || gameData;
 seedR32Results();
-rescoreAllPredictions();
 backfillBracket();
 renderAll();
 
