@@ -198,6 +198,18 @@
             <button class="btn-secondary" id="migrate-predictions-btn" style="margin-bottom:10px;">🔄 Migrate Old Prediction Names</button>
             <button class="btn-danger" id="reset-game-btn">Reset All Data</button>
         </div>
+        <div class="card">
+            <h2>🔒 Score Overrides</h2>
+            <p style="color:#a0aec0;font-size:0.85rem;margin-bottom:12px;">Set a player's score directly. Future correctly-scored predictions add on top automatically.</p>
+            <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+                <select id="override-player-select" style="margin-bottom:0;flex:1;min-width:140px;"><option value="">Select player...</option></select>
+                <input type="number" id="override-score-input" placeholder="Score (pts)" style="margin-bottom:0;flex:1;min-width:100px;">
+                <button class="btn-primary" id="set-override-btn">Set</button>
+                <button class="btn-secondary" id="clear-override-btn">Clear</button>
+            </div>
+            <button class="btn-success" id="load-correct-scores-btn" style="width:100%;margin-bottom:12px;">⚡ Load Verified Scores (15 Jul 2026)</button>
+            <div id="overrides-list"></div>
+        </div>
     </div>
 </div>
 <div class="toast" id="toast"></div>
@@ -466,7 +478,7 @@ try {
 } catch(e) { console.warn('Firebase init failed:', e.message); }
 if (!firebaseReady) { document.getElementById('sync-status').textContent = '📁 Offline mode'; document.getElementById('sync-status').className = 'sync-status offline'; }
 
-var gameData = { players: [], predictions: {}, results: {}, winner: null };
+var gameData = { players: [], predictions: {}, results: {}, winner: null, scoreOverrides: {} };
 var fixtureOverrides = {};
 var STORAGE_KEY = 'wc2026_prediction_game';
 function loadLocal() { try { var r = localStorage.getItem(STORAGE_KEY); return r ? JSON.parse(r) : null; } catch(e) { return null; } }
@@ -478,8 +490,8 @@ if (firebaseReady) {
     gameRef.on('value', function(snap) {
         fbLoaded = true;
         var d = snap.val();
-        if (d) { gameData.players = d.players||[]; gameData.predictions = d.predictions||{}; gameData.results = d.results||{}; gameData.winner = d.winner||null; }
-        else { gameData = { players:[], predictions:{}, results:{}, winner:null }; }
+        if (d) { gameData.players = d.players||[]; gameData.predictions = d.predictions||{}; gameData.results = d.results||{}; gameData.winner = d.winner||null; gameData.scoreOverrides = d.scoreOverrides||{}; }
+        else { gameData = { players:[], predictions:{}, results:{}, winner:null, scoreOverrides:{} }; }
         saveLocal(); seedR32Results(); backfillBracket(); renderAll();
     }, function(err) { firebaseReady = false; gameData = loadLocal() || gameData; renderAll(); });
     db.ref('fixtures').on('value', function(snap) { fixtureOverrides = snap.val()||{}; seedR32Results(); backfillBracket(); renderAll(); });
@@ -523,11 +535,29 @@ function hasMatchStarted(stage){
 function showToast(m) { var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},3000); }
 function getStageMultiplier(s, matchName) { var m=matchName||''; if(m.indexOf('Round of 32')>=0)return 10;if(m.indexOf('Round of 16')>=0)return 15;if(m.indexOf('Quarter')>=0)return 20;if(m.indexOf('Semi')>=0)return 25;if(m.indexOf('Third')>=0)return 30;if(m.indexOf('Final')>=0&&m.indexOf('Semi')<0)return 35; if(s.indexOf('Round of 32')>=0)return 10;if(s.indexOf('Round of 16')>=0)return 15;if(s.indexOf('Quarter')>=0)return 20;if(s.indexOf('Semi')>=0)return 25;if(s.indexOf('Third')>=0)return 30;if(s.indexOf('Final')>=0)return 35;if(s.indexOf('Group')>=0)return 5;return 5; }
 function getEffectiveMatches(stage) { if(!PRELOADED_MATCHES[stage])return[];return PRELOADED_MATCHES[stage].map(function(m,i){var o=fixtureOverrides[stage]&&fixtureOverrides[stage][i];return{match:(o&&o.match)||m.match,venue:(o&&o.venue)||m.venue};}); }
-function getScores() { var s={};(gameData.players||[]).forEach(function(p){s[p]=0;});if(gameData.predictions){Object.keys(gameData.predictions).forEach(function(k){var p=gameData.predictions[k];if(p&&p.correct)s[p.player]=(s[p.player]||0)+getStageMultiplier(p.stage,p.match);if(p&&p.scoreCorrect){var isQFOrLater=p.stage.indexOf('Quarter')>=0||p.stage.indexOf('Semi')>=0||p.stage.indexOf('Third')>=0||(p.stage.indexOf('Final')>=0&&p.stage.indexOf('Semi')<0);s[p.player]=(s[p.player]||0)+(isQFOrLater?5:1);}});}
-    // Manual point adjustments
-    var BONUS_POINTS = {'Harsha': 5, 'Kaibe': 25, 'Dominique': 10, 'Jermaine': -15, 'Patience': 20, 'Tshepo4Arsenal': 6, 'Yusuf Haff': 16};
-    Object.keys(BONUS_POINTS).forEach(function(name){if(s[name]!==undefined)s[name]+=BONUS_POINTS[name];});
-    return Object.keys(s).map(function(n){return{name:n,points:s[n]};}).sort(function(a,b){return b.points-a.points;}); }
+function getScores() {
+    var s={};
+    (gameData.players||[]).forEach(function(p){
+        s[p] = (gameData.scoreOverrides && gameData.scoreOverrides[p] !== undefined) ? gameData.scoreOverrides[p] : 0;
+    });
+    // Only add predictions that were scored AFTER the override was set
+    if(gameData.predictions){
+        Object.keys(gameData.predictions).forEach(function(k){
+            var pred=gameData.predictions[k];
+            if(!pred) return;
+            var hasOverride = gameData.scoreOverrides && gameData.scoreOverrides[pred.player] !== undefined;
+            var setAt = gameData.scoreOverrides && gameData.scoreOverrides[pred.player+'_setAt'];
+            // If player has override and prediction has no timestamp after setAt, skip it
+            if(hasOverride) {
+                if(!setAt) return; // override set but no cutoff timestamp — skip all predictions
+                if(!pred.timestamp || pred.timestamp <= setAt) return; // scored before cutoff — skip
+            }
+            if(pred.correct) s[pred.player]=(s[pred.player]||0)+getStageMultiplier(pred.stage,pred.match);
+            if(pred.scoreCorrect){var isQFOrLater=pred.stage.indexOf('Quarter')>=0||pred.stage.indexOf('Semi')>=0||pred.stage.indexOf('Third')>=0||(pred.stage.indexOf('Final')>=0&&pred.stage.indexOf('Semi')<0);s[pred.player]=(s[pred.player]||0)+(isQFOrLater?5:1);}
+        });
+    }
+    return Object.keys(s).map(function(n){return{name:n,points:s[n]};}).sort(function(a,b){return b.points-a.points;});
+}
 
 // ==================== TABS ====================
 document.querySelectorAll('.tab-btn').forEach(function(b){b.addEventListener('click',function(){
@@ -807,6 +837,71 @@ function propagateWinner(stage, match, winner) {
 document.getElementById('declare-winner-btn').addEventListener('click',function(){if(!isAdminUnlocked)return;var s=getScores();if(!s.length||s[0].points===0)return showToast('No scores');if(!confirm('Declare '+s[0].name+' winner?'))return;persist('winner',s[0]);showToast('🏆 '+s[0].name+' wins!');});
 document.getElementById('reset-game-btn').addEventListener('click',function(){if(!isAdminUnlocked)return;if(!confirm('Delete ALL?'))return;if(!confirm('Sure?'))return;if(firebaseReady)gameRef.set(null);else{localStorage.removeItem(STORAGE_KEY);gameData={players:[],predictions:{},results:{},winner:null};}showToast('Reset');renderAll();});
 
+// ==================== SCORE OVERRIDES ====================
+function renderOverridesList() {
+    var sel = document.getElementById('override-player-select');
+    if (sel) {
+        var current = sel.value;
+        sel.innerHTML = '<option value="">Select player...</option>' +
+            (gameData.players||[]).map(function(p){return '<option value="'+p+'">'+p+'</option>';}).join('');
+        if (current) sel.value = current;
+    }
+    var c = document.getElementById('overrides-list');
+    if (!c) return;
+    var ov = gameData.scoreOverrides || {};
+    var names = Object.keys(ov).filter(function(k){ return k.indexOf('_setAt') < 0; });
+    if (!names.length) { c.innerHTML = '<p style="color:#a0aec0;font-size:0.85rem;">No overrides set.</p>'; return; }
+    c.innerHTML = '<table style="width:100%;font-size:0.85rem;border-collapse:collapse;">' +
+        '<tr><th style="text-align:left;color:#FFB81C;padding:4px 8px;">Player</th><th style="text-align:right;color:#FFB81C;padding:4px 8px;">Score</th></tr>' +
+        names.map(function(n){ return '<tr><td style="padding:4px 8px;">'+n+'</td><td style="text-align:right;padding:4px 8px;font-weight:600;color:#68d391;">'+ov[n]+' pts</td></tr>'; }).join('') +
+        '</table>';
+}
+
+document.getElementById('set-override-btn').addEventListener('click', function(){
+    if (!isAdminUnlocked) return showToast('Admin required');
+    var name = document.getElementById('override-player-select').value;
+    var pts = parseInt(document.getElementById('override-score-input').value);
+    if (!name) return showToast('Select a player');
+    if (isNaN(pts) || pts < 0) return showToast('Enter a valid score');
+    var u = {};
+    u['scoreOverrides/' + name] = pts;
+    u['scoreOverrides/' + name + '_setAt'] = Date.now();
+    persistUpdate(u);
+    document.getElementById('override-score-input').value = '';
+    showToast('Score set: ' + name + ' = ' + pts + ' pts');
+});
+
+document.getElementById('clear-override-btn').addEventListener('click', function(){
+    if (!isAdminUnlocked) return showToast('Admin required');
+    var name = document.getElementById('override-player-select').value;
+    if (!name) return showToast('Select a player');
+    if (!confirm('Clear override for ' + name + '? Score will recalculate from predictions.')) return;
+    if (firebaseReady) {
+        gameRef.child('scoreOverrides/' + name).remove();
+        gameRef.child('scoreOverrides/' + name + '_setAt').remove();
+    } else {
+        if (gameData.scoreOverrides) { delete gameData.scoreOverrides[name]; delete gameData.scoreOverrides[name+'_setAt']; }
+        saveLocal(); renderAll();
+    }
+    showToast('Override cleared for ' + name);
+});
+
+document.getElementById('load-correct-scores-btn').addEventListener('click', function(){
+    if (!isAdminUnlocked) return showToast('Admin required');
+    if (!confirm('Set verified scores for all players? Future results will add on top.')) return;
+    var setAt = Date.now();
+    var scores = {
+        'Dominique': 556, 'Kaibe': 530, 'Harsha': 515,
+        'Patience': 355, 'Jermaine': 340, 'Luven Naidoo': 200,
+        'Tshepo4Arsenal': 156, 'Oscar rvk': 75, 'Yusuf Haff': 60,
+        'Ofentse Seemise': 40, 'Mbalikins': 25
+    };
+    var u = {};
+    Object.keys(scores).forEach(function(n){ u['scoreOverrides/'+n] = scores[n]; u['scoreOverrides/'+n+'_setAt'] = setAt; });
+    persistUpdate(u);
+    showToast('✅ Verified scores loaded for ' + Object.keys(scores).length + ' players');
+});
+
 // ==================== MIGRATE OLD PREDICTION NAMES ====================
 document.getElementById('migrate-predictions-btn').addEventListener('click',function(){
     if(!isAdminUnlocked)return showToast('Admin required');
@@ -1035,7 +1130,7 @@ document.getElementById('fix-stage').addEventListener('change',function(){var s=
 document.getElementById('update-fixture-btn').addEventListener('click',function(){if(!isAdminUnlocked)return showToast('Admin required');var s=document.getElementById('fix-stage').value,idx=document.getElementById('fix-match').value,name=document.getElementById('fix-new-name').value.trim();if(!s||idx===''||!name)return showToast('Fill all fields');var orig=PRELOADED_MATCHES[s][parseInt(idx)];if(firebaseReady)db.ref('fixtures/'+s+'/'+idx).set({match:name,venue:orig?orig.venue:''});else{if(!fixtureOverrides[s])fixtureOverrides[s]={};fixtureOverrides[s][idx]={match:name,venue:orig?orig.venue:''};localStorage.setItem('wc2026_fixtures',JSON.stringify(fixtureOverrides));renderAll();}document.getElementById('fix-new-name').value='';showToast('Updated!');});
 
 // ==================== RENDER ====================
-function renderAll(){renderPlayers();renderStages();renderDashboard();renderLeaderboard('dashboard-leaderboard',10);renderLeaderboard('full-leaderboard',20);renderResults();renderTodaysGames();renderPercentages();renderYesterdayResults();renderMyPredictions();
+function renderAll(){renderPlayers();renderStages();renderDashboard();renderLeaderboard('dashboard-leaderboard',10);renderLeaderboard('full-leaderboard',20);renderResults();renderTodaysGames();renderPercentages();renderYesterdayResults();renderMyPredictions();renderOverridesList();
     var btn=document.getElementById('submit-prediction-btn');if(gameData.winner){btn.disabled=true;btn.textContent='🏆 Game Over';btn.style.opacity='0.5';}else{btn.disabled=false;btn.textContent='Submit Prediction';btn.style.opacity='1';}
 }
 function renderPlayers(){var c=document.getElementById('players-list'),pl=gameData.players||[];document.getElementById('player-count').textContent=pl.length;if(!pl.length){c.innerHTML='<p style="color:#ccc">No players yet</p>';return;}c.innerHTML=pl.map(function(p){return'<span class="player-chip">'+p+'</span>';}).join('');}
