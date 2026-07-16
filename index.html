@@ -540,20 +540,21 @@ function getScores() {
     (gameData.players||[]).forEach(function(p){
         s[p] = (gameData.scoreOverrides && gameData.scoreOverrides[p] !== undefined) ? gameData.scoreOverrides[p] : 0;
     });
-    // Only add predictions that were scored AFTER the override was set
     if(gameData.predictions){
         Object.keys(gameData.predictions).forEach(function(k){
             var pred=gameData.predictions[k];
-            if(!pred) return;
+            if(!pred||!pred.correct&&!pred.scoreCorrect) return;
             var hasOverride = gameData.scoreOverrides && gameData.scoreOverrides[pred.player] !== undefined;
-            var setAt = gameData.scoreOverrides && gameData.scoreOverrides[pred.player+'_setAt'];
-            // If player has override and prediction has no timestamp after setAt, skip it
             if(hasOverride) {
-                if(!setAt) return; // override set but no cutoff timestamp — skip all predictions
-                if(!pred.timestamp || pred.timestamp <= setAt) return; // scored before cutoff — skip
+                // Only count predictions for Wed Jul 15 Semi-Final onwards (after override was set)
+                var stagesAfterOverride = ['Semi-Final - Wed Jul 15','Third Place - Sat Jul 18','Final - Sun Jul 19'];
+                if(stagesAfterOverride.indexOf(pred.stage) < 0) return;
             }
             if(pred.correct) s[pred.player]=(s[pred.player]||0)+getStageMultiplier(pred.stage,pred.match);
-            if(pred.scoreCorrect){var isQFOrLater=pred.stage.indexOf('Quarter')>=0||pred.stage.indexOf('Semi')>=0||pred.stage.indexOf('Third')>=0||(pred.stage.indexOf('Final')>=0&&pred.stage.indexOf('Semi')<0);s[pred.player]=(s[pred.player]||0)+(isQFOrLater?5:1);}
+            if(pred.scoreCorrect){
+                var isQFOrLater=pred.stage.indexOf('Quarter')>=0||pred.stage.indexOf('Semi')>=0||pred.stage.indexOf('Third')>=0||(pred.stage.indexOf('Final')>=0&&pred.stage.indexOf('Semi')<0);
+                s[pred.player]=(s[pred.player]||0)+(isQFOrLater?5:1);
+            }
         });
     }
     return Object.keys(s).map(function(n){return{name:n,points:s[n]};}).sort(function(a,b){return b.points-a.points;});
@@ -693,7 +694,7 @@ function recordResult(stage,match,winner,score){
     var rk=btoa(unescape(encodeURIComponent(stage+'|'+match))).replace(/[.#$/\[\]]/g,'_');
     persist('results/'+rk,{stage:stage,match:match,winner:winner,score:score||null,timestamp:Date.now()});
     var n=0;if(gameData.predictions){var u={};Object.keys(gameData.predictions).forEach(function(k){var p=gameData.predictions[k];
-    if(!p||p.scored)return;
+    if(!p||p.scored&&p.stage!==stage)return;
     // Match by stage + exact match name OR by stage + both teams present in prediction match name
     var stageMatch = p.stage===stage;
     var nameMatch = p.match.toLowerCase()===match.toLowerCase();
@@ -711,7 +712,12 @@ function recordResult(stage,match,winner,score){
     }
     if(stageMatch&&nameMatch){u['predictions/'+k+'/scored']=true;
     if(p.team.toLowerCase()===winner.toLowerCase()){u['predictions/'+k+'/correct']=true;n++;}else{u['predictions/'+k+'/correct']=false;}
-    if(score&&p.predictedScore&&p.predictedScore===score){u['predictions/'+k+'/scoreCorrect']=true;}else{u['predictions/'+k+'/scoreCorrect']=false;}}});
+    if(score&&p.predictedScore&&p.predictedScore===score){u['predictions/'+k+'/scoreCorrect']=true;}else{
+        // Also check reversed score (winner's goals first vs fixture order)
+        var rev=score?score.split('-').reverse().join('-'):'';
+        if(score&&p.predictedScore&&p.predictedScore===rev){u['predictions/'+k+'/scoreCorrect']=true;}
+        else{u['predictions/'+k+'/scoreCorrect']=false;}
+    }}});
     if(Object.keys(u).length)persistUpdate(u);}showToast('Result: '+n+' correct.');
     // Auto-propagate winner into next round fixtures
     propagateWinner(stage,match,winner);
