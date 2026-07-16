@@ -170,6 +170,7 @@
         <div class="card" id="declare-section" style="display:none;">
             <h2>🏆 Declare Winner</h2>
             <button class="btn-primary" id="declare-winner-btn">Declare Game Winner</button>
+            <button class="btn-secondary" id="export-csv-btn" style="margin-left:10px;">📥 Export Top 10 Predictions (CSV)</button>
         </div>
     </div>
 
@@ -624,13 +625,14 @@ document.getElementById('pred-stage').addEventListener('change',function(){
 document.getElementById('pred-match-select').addEventListener('change',function(){
     var match=this.value,ts=document.getElementById('pred-team');
     if(!match){ts.innerHTML='<option value="">Select match first...</option>';return;}
-    var cleaned=match.replace(/^[A-Z0-9]+:\s*/,'').replace(/\s*\(.*?\)\s*$/,'').trim();
+    var stage=document.getElementById('pred-stage').value;
+    var cleaned=match.replace(/^[^:]+:\s*/,'').replace(/\s*\(.*?\)\s*$/,'').trim();
     var parts=cleaned.split(/\s+vs\s+/i);
-    if(parts.length===2){ts.innerHTML='<option value="">Pick winner...</option><option value="'+parts[0].trim()+'">'+parts[0].trim()+'</option><option value="'+parts[1].trim()+'">'+parts[1].trim()+'</option><option value="Draw">Draw</option>';}
-    else{ts.innerHTML='<option value="">Pick winner...</option><option value="Draw">Draw</option>';}
+    var isKnockout = stage.indexOf('Round of 32')>=0||stage.indexOf('Round of 16')>=0||stage.indexOf('Quarter')>=0||stage.indexOf('Semi')>=0||stage.indexOf('Third Place')>=0||stage.indexOf('Final')>=0;
+    if(parts.length===2){ts.innerHTML='<option value="">Pick winner...</option><option value="'+parts[0].trim()+'">'+parts[0].trim()+'</option><option value="'+parts[1].trim()+'">'+parts[1].trim()+'</option>'+(isKnockout?'':'<option value="Draw">Draw</option>');}
+    else{ts.innerHTML='<option value="">Pick winner...</option>'+(isKnockout?'':'<option value="Draw">Draw</option>');}
     // Check if player already predicted this match — pre-fill if so
     var player=document.getElementById('pred-player').value;
-    var stage=document.getElementById('pred-stage').value;
     if(player&&stage&&match&&gameData.predictions){
         var key=btoa(unescape(encodeURIComponent(player+'|'+stage+'|'+match))).replace(/[.#$/\[\]]/g,'_');
         var existing=gameData.predictions[key];
@@ -841,6 +843,52 @@ function propagateWinner(stage, match, winner) {
     renderAll();
 }
 document.getElementById('declare-winner-btn').addEventListener('click',function(){if(!isAdminUnlocked)return;var s=getScores();if(!s.length||s[0].points===0)return showToast('No scores');if(!confirm('Declare '+s[0].name+' winner?'))return;persist('winner',s[0]);showToast('🏆 '+s[0].name+' wins!');});
+
+document.getElementById('export-csv-btn').addEventListener('click', function(){
+    if(!isAdminUnlocked) return showToast('Admin required');
+    var scores = getScores().slice(0,10);
+    var top10 = scores.map(function(s){ return s.name; });
+    var rows = [['Player','Total Points','Stage','Match','Predicted Winner','Predicted Score','Result','Correct','Score Correct']];
+    top10.forEach(function(name){
+        var playerPreds = [];
+        if(gameData.predictions){
+            Object.keys(gameData.predictions).forEach(function(k){
+                var p = gameData.predictions[k];
+                if(p && p.player === name) playerPreds.push(p);
+            });
+        }
+        playerPreds.sort(function(a,b){ return (a.timestamp||0)-(b.timestamp||0); });
+        var pts = scores.find(function(s){ return s.name===name; }).points;
+        if(playerPreds.length === 0){
+            rows.push([name, pts, '','','','','','','']);
+        } else {
+            playerPreds.forEach(function(p){
+                var result = '';
+                if(gameData.results){
+                    Object.keys(gameData.results).forEach(function(k){
+                        var r = gameData.results[k];
+                        if(r && r.stage===p.stage && r.match.toLowerCase()===p.match.toLowerCase()) result = r.winner + (r.score ? ' ('+r.score+')' : '');
+                    });
+                }
+                rows.push([
+                    name, pts,
+                    p.stage, p.match,
+                    p.team, p.predictedScore||'',
+                    result,
+                    p.scored ? (p.correct ? 'Yes' : 'No') : 'Pending',
+                    p.scored ? (p.scoreCorrect ? 'Yes' : 'No') : 'Pending'
+                ]);
+            });
+        }
+    });
+    var csv = rows.map(function(r){ return r.map(function(c){ return '"'+(c+'').replace(/"/g,'""')+'"'; }).join(','); }).join('\n');
+    var blob = new Blob([csv], {type:'text/csv'});
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'wc2026_top10_predictions.csv';
+    a.click();
+    showToast('CSV downloaded!');
+});
 document.getElementById('reset-game-btn').addEventListener('click',function(){if(!isAdminUnlocked)return;if(!confirm('Delete ALL?'))return;if(!confirm('Sure?'))return;if(firebaseReady)gameRef.set(null);else{localStorage.removeItem(STORAGE_KEY);gameData={players:[],predictions:{},results:{},winner:null};}showToast('Reset');renderAll();});
 
 // ==================== SCORE OVERRIDES ====================
